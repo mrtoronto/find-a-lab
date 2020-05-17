@@ -1,13 +1,24 @@
 from datetime import datetime
-from flask import render_template, flash, redirect, url_for, request
+from flask import render_template, flash, redirect, url_for, request, jsonify
 from flask_login import login_user, logout_user, current_user, login_required
+from config import Config
+
 from werkzeug.urls import url_parse
 from app import app, db
-from app.forms import LoginForm, RegistrationForm, EditProfileForm, PostForm, \
+from app.forms import LoginForm, RegistrationForm, EditProfileForm, \
     ResetPasswordRequestForm, ResetPasswordForm
-from app.models import User, Post
+from app.models import User
 from app.email import send_password_reset_email
 
+import re
+import ast
+import pandas as pd
+from app import app
+from app.main_functions import *
+from collections import Counter
+#from tqdm.notebook import tqdm
+from geotext import GeoText
+import time
 
 @app.before_request
 def before_request():
@@ -18,39 +29,8 @@ def before_request():
 
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/index', methods=['GET', 'POST'])
-@login_required
 def index():
-    form = PostForm()
-    if form.validate_on_submit():
-        post = Post(body=form.post.data, author=current_user)
-        db.session.add(post)
-        db.session.commit()
-        flash('Your post is now live!')
-        return redirect(url_for('index'))
-    page = request.args.get('page', 1, type=int)
-    posts = current_user.followed_posts().paginate(
-        page, app.config['POSTS_PER_PAGE'], False)
-    next_url = url_for('index', page=posts.next_num) \
-        if posts.has_next else None
-    prev_url = url_for('index', page=posts.prev_num) \
-        if posts.has_prev else None
-    return render_template('index.html', title='Home', form=form,
-                           posts=posts.items, next_url=next_url,
-                           prev_url=prev_url)
-
-
-@app.route('/explore')
-@login_required
-def explore():
-    page = request.args.get('page', 1, type=int)
-    posts = Post.query.order_by(Post.timestamp.desc()).paginate(
-        page, app.config['POSTS_PER_PAGE'], False)
-    next_url = url_for('explore', page=posts.next_num) \
-        if posts.has_next else None
-    prev_url = url_for('explore', page=posts.prev_num) \
-        if posts.has_prev else None
-    return render_template('index.html', title='Explore', posts=posts.items,
-                           next_url=next_url, prev_url=prev_url)
+    return render_template('index.html')
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -126,16 +106,8 @@ def reset_password(token):
 @app.route('/user/<username>')
 @login_required
 def user(username):
-    user = User.query.filter_by(username=username).first_or_404()
-    page = request.args.get('page', 1, type=int)
-    posts = user.posts.order_by(Post.timestamp.desc()).paginate(
-        page, app.config['POSTS_PER_PAGE'], False)
-    next_url = url_for('user', username=user.username, page=posts.next_num) \
-        if posts.has_next else None
-    prev_url = url_for('user', username=user.username, page=posts.prev_num) \
-        if posts.has_prev else None
-    return render_template('user.html', user=user, posts=posts.items,
-                           next_url=next_url, prev_url=prev_url)
+    user = User.query.filter_by(username=username).first_or_404()    
+    return render_template('user.html', user=user)
 
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
@@ -155,33 +127,67 @@ def edit_profile():
                            form=form)
 
 
-@app.route('/follow/<username>')
-@login_required
-def follow(username):
-    user = User.query.filter_by(username=username).first()
-    if user is None:
-        flash('User {} not found.'.format(username))
-        return redirect(url_for('index'))
-    if user == current_user:
-        flash('You cannot follow yourself!')
-        return redirect(url_for('user', username=username))
-    current_user.follow(user)
-    db.session.commit()
-    flash('You are following {}!'.format(username))
-    return redirect(url_for('user', username=username))
 
 
-@app.route('/unfollow/<username>')
-@login_required
-def unfollow(username):
-    user = User.query.filter_by(username=username).first()
-    if user is None:
-        flash('User {} not found.'.format(username))
-        return redirect(url_for('index'))
-    if user == current_user:
-        flash('You cannot unfollow yourself!')
-        return redirect(url_for('user', username=username))
-    current_user.unfollow(user)
-    db.session.commit()
-    flash('You are not following {}.'.format(username))
-    return redirect(url_for('user', username=username))
+#######
+
+
+@app.route('/api/help/', methods = ['GET'])
+def help():
+    return {'endpoints' : {'/api/query/author_affils/' : {'parameters' : 
+                                                {'query' : '', 'from' : '', 'locations' : '', 'n' : ''}, 'info' : ''},
+                            '/api/query/author_papers/' : {'parameters' : 
+                                                {'query' : '', 'from' : '', 'locations' : '', 'n' : ''}, 'info' : ''}
+                        },
+            'general_notes' : 'chris smells'}
+
+
+@app.route('/api/query/author_affils/', methods = ['GET'])
+def query_author_affils():
+
+    timeit_start = time.time()
+
+    query = request.args.get('query')
+    from_year = int(request.args.get('from'))
+    locations = request.args.get('locations')
+    n_authors = request.args.get('n') or 25
+    if locations:
+        locations = [location.strip() for location in locations.split(',')]
+    else:
+        locations = None
+
+    author_df = query_author_affils_data(query, from_year, locations, n_authors, timeit_start)
+
+    if len(author_df) == 0:
+        abort(404)
+    
+    timeit_end = time.time()
+    app.logger.info(f'`author_affils_w_location` for "{query}" from {from_year} onward ran in {round(timeit_end - timeit_start, 4)} seconds. Returning results.')
+    #print(f'`author_affils_w_location` for "{query}" from {from_year} onward ran in {round(timeit_end - timeit_start, 4)} seconds. Returning results.')
+
+    return jsonify(author_df.to_dict('records'))
+
+
+@app.route('/api/query/author_papers/', methods = ['GET'])
+def query_author_papers():
+
+    timeit_start = time.time()
+
+    query = request.args.get('query')
+    from_year = int(request.args.get('from', 2000))
+    locations = request.args.get('locations', [])
+    n_authors = request.args.get('n', 25)
+    affils = request.args.get('affiliations', [])
+    if locations:
+        locations = [location.strip().lower() for location in locations.split(',')]
+
+    if affils:
+        affils = [affil.strip().lower() for affil in affils.split(',')]
+
+    out_dict = query_author_papers_data(query, from_year, locations, affils, n_authors, timeit_start)
+
+    timeit_end = time.time()
+    #print(f'`author_papers_w_location` for "{query}" from {from_year} onward ran in {round(timeit_end - timeit_start,4)} seconds. Returning results.')
+    app.logger.info(f'`author_papers_w_location` for "{query}" from {from_year} onward ran in {round(timeit_end - timeit_start,4)} seconds. Returning results.')
+
+    return jsonify(out_dict)
