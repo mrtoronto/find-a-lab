@@ -63,7 +63,7 @@ def edit_profile():
 
 
 @bp.route('/query/<query_type>', methods=['GET', 'POST'])
-#@login_required
+@login_required
 def make_a_query(query_type):
     if query_type == 'author_papers':
         form = authorIndexQueryForm()      
@@ -71,23 +71,27 @@ def make_a_query(query_type):
         form = authorIndexQueryForm()      
 
     if form.validate_on_submit() :
+        flash('Your query is running!')
+        results = query_author_papers(query = form.query_text.data, 
+                                                from_year = form.query_from.data,
+                                                locations = form.locations.data, 
+                                                n_authors = 25, 
+                                                affils = form.affiliations.data, 
+                                                api_key = form.api_key.data)
         query = Query(query_type = query_type,
-                    query_text = form.query_text.data, 
-                    query_from = form.query_from.data,
-                    query_affiliations=form.affiliations.data, 
-                    query_locations=form.locations.data,
-                    user_querying = current_user.username or '')
+            query_text = form.query_text.data, 
+            query_from = form.query_from.data,
+            query_affiliations=form.affiliations.data, 
+            query_locations=form.locations.data,
+            user_querying = current_user.username,
+            length_of_results = len(results))
 
         db.session.add(query)
         db.session.commit()
-        flash('Your query is running!')
-        results = query_author_papers(query = query.query_text, 
-                                                from_year = query.query_from,
-                                                locations = query.query_locations, 
-                                                n_authors = 25, 
-                                                affils = query.query_affiliations, 
-                                                api_key = form.api_key.data)
-        return render_template('query_results.html', json_data = results)
+
+        if len(results) == 1:
+            return render_template('errors/data_error.html', data = list(results[0].values())[0])
+        return render_template('query_results.html', data = results)
 
     return render_template('make_a_query.html', form=form)
 

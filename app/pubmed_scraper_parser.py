@@ -135,7 +135,7 @@ def get_article_ids(query, sort, locations, affils, from_year = "",
 
     ### More DB options here : https://www.ncbi.nlm.nih.gov/books/NBK3837/
     if from_year:
-        reldate = '&reldate=' + str((2021 - from_year) * 365)
+        reldate = '&reldate=' + str((2021 - int(from_year)) * 365)
     else:
         reldate = ''
     ### Get the webpage with the IDs for the articles you'll want to fetch
@@ -153,8 +153,9 @@ def get_article_ids(query, sort, locations, affils, from_year = "",
 
     print(f'Query for "{query}" from {from_year} started {round(time.time() - time_start, 4)} seconds ago has {str(count_results)} results. Downloading now.')
     parsed_papers = []
+
     if count_results > int(Config.MAX_RESULTS):
-        papers_result = pd.DataFrame([f"Query too large. Try again with more specific query terms. This query had {count_results} results and the current max is set to {Config.MAX_RESULTS}. I apologize for this limit. Making websites is harder than you'd think."])
+        papers_result = pd.DataFrame([f"Your query was too large. The results had {count_results} papers and the current max is set to {Config.MAX_RESULTS}. I apologize for this limit. Making websites is harder than you'd think."])
     else:
         ### Get Abstracts with efetch
         efetch_base = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi'

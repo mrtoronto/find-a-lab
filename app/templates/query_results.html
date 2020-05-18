@@ -47,7 +47,7 @@
 			        </tr>
 		    	</thead>
 		    	<tbody>
-			    	{% for author, author_dict in json_data.items() %}
+			    	{% for author, author_dict in data.items() %}
 			        <tr>
 			            <td class="tableCell"><b>{{ author }}</b></td>
 			            <td sclass="tableCell">{{ author_dict['total_count'] }}</td>

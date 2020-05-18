@@ -13,5 +13,5 @@ class Config(object):
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     ADMINS = ['your-email@example.com']
-    MAX_RESULTS = os.environ.get('MAX_RESULTS')
+    MAX_RESULTS = os.environ.get('MAX_RESULTS') or 1500
     LOG_TO_STDOUT = os.environ.get('LOG_TO_STDOUT')

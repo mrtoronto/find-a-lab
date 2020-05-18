@@ -55,3 +55,4 @@ class Query(db.Model):
     query_locations = db.Column(db.String(250))
     user_querying = db.Column(db.String(250))
     redis_token = db.Column(db.String(400))
+    length_of_results = db.Column(db.Integer)

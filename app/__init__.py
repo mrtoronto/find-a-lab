@@ -13,7 +13,7 @@ from flask_babel import Babel
 db = SQLAlchemy()
 migrate = Migrate()
 login = LoginManager()
-login.login_view = 'login'
+login.login_view = 'auth.login'
 mail = Mail()
 bootstrap = Bootstrap()
 babel = Babel()
