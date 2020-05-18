@@ -1,1 +1,1 @@
-web: gunicorn app:app --timeout 180
+web: gunicorn fal:app --timeout 180
