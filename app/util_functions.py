@@ -128,8 +128,19 @@ def count_author_affil_locations(author_name, authors_affils, affil_loc, n_affil
     ### Count up the number of *PMID*__*Location/Affiliation*
     author_affil_counts = Counter(author_affiliations)
     ### Create a dictionary of *Location/Affiliation* : count
-    reformatted_affiliations = {affil[0].split('__')[1] : affil[1] for affil in author_affil_counts.most_common(n_affiliations * 3)}
-    
+    reformatted_affiliations = {}
+    for pmid_affil, affil_count in author_affil_counts.most_common(n_affiliations * 3):
+        loop_pmid = pmid_affil.split('__')[0]
+        loop_affil = pmid_affil.split('__')[1]
+
+        if reformatted_affiliations.get(loop_pmid):
+            if reformatted_affiliations[loop_pmid].get(loop_affil):
+                reformatted_affiliations[loop_pmid][loop_affil] += affil_count
+            else:
+                reformatted_affiliations[loop_pmid][loop_affil] = affil_count
+        else:
+            reformatted_affiliations[loop_pmid] = {}
+            reformatted_affiliations[loop_pmid][loop_affil] = affil_count
     
     return reformatted_affiliations
 
@@ -232,7 +243,7 @@ def get_top_authors_papers(top_authors, authors_affils, papers_result):
                         'pubdate' : matchedPaper['pubdate'], 
                         'link' : matchedPaper['link'], 
                         'pmid' : matchedPaper['pmid'],
-                        'pubtype_list' : ",".join(matchedPaper['pub_type_list']),
+                        'pubtype_list' : list(matchedPaper['pub_type_list']),
                         'all_authors_list' : ",".join([author_affil[0][2] + ', ' + author_affil[0][0] for author_affil in matchedPaper['author_list']]), 
                         'mesh_keywords' : list(matchedPaper['mesh_keywords'].keys()),
                         'other_ids' : ",".join(matchedPaper['other_ids'].values())

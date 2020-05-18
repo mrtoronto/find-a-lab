@@ -169,7 +169,7 @@ def make_a_query(query_type):
                                                 n_authors = 25, 
                                                 affils = query.query_affiliations, 
                                                 api_key = form.api_key.data)
-        author_keywords = {author : author_dict['papers_keywords_counts'] for author, author_dict in results.items()}
+        author_keywords = {author : author_dict['pubtypes_'] for author, author_dict in results.items()}
         return render_template('query_results.html', json_data = results)
 
     return render_template('make_a_query.html', form=form)

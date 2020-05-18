@@ -56,8 +56,21 @@ def query_author_papers_data(query, from_year, locations, affils, n_authors, tim
     authors_affils = create_author_affil_list(papers_result)
     affiliations_by_author, top_authors, fully_filtered_flag = map_author_to_affil(authors_affils, 
                             locations_of_interest = locations, affils_of_interest = affils, n_affiliations = 5)
-    #Get papers for top 25 authors
-
+    """
+    Get papers for top 25 authors
+    Each element of contained in `paper_top_author_dict` looks like :
+    {author_of_interest : {
+        'author' : author_of_interest, 
+        'title' : matchedPaper['title'], 
+        'pubdate' : matchedPaper['pubdate'], 
+        'link' : matchedPaper['link'], 
+        'pmid' : matchedPaper['pmid'],
+        'pubtype_list' : ",".join(matchedPaper['pub_type_list']),
+        'all_authors_list' : ",".join([author_affil[0][2] + ', ' + author_affil[0][0] for author_affil in matchedPaper['author_list']]), 
+        'mesh_keywords' : list(matchedPaper['mesh_keywords'].keys()),
+        'other_ids' : ",".join(matchedPaper['other_ids'].values())}
+    }
+    """
     paper_top_author_dict = get_top_authors_papers(top_authors, authors_affils, papers_result)
 
     print(f"Matched papers found in {round(time.time() - timeit_start, 4)} seconds.")
@@ -79,6 +92,8 @@ def query_author_papers_data(query, from_year, locations, affils, n_authors, tim
             author_papers_df = big_df.loc[big_df['author'] == author_dict['author'], :]
             author_papers_titles_links = big_df.loc[big_df['author'] == author_dict['author'], ['pmid', 'title', 'link']].drop_duplicates()
             author_papers_pmids_keywords = big_df.loc[big_df['author'] == author_dict['author'], ['pmid', 'mesh_keywords']].drop_duplicates(subset=['pmid'])
+            author_papers_pmids_pubtypes = big_df.loc[big_df['author'] == author_dict['author'], ['pmid', 'pubtype_list']].drop_duplicates(subset=['pmid'])
+
 
             out_author_dict = {'author' : author_dict['author'], 
                             'total_count' : author_dict['total_papers'],
@@ -90,6 +105,11 @@ def query_author_papers_data(query, from_year, locations, affils, n_authors, tim
             out_author_dict['papers_keywords'] = [paper['mesh_keywords'] for paper in author_papers_pmids_keywords.to_dict('records')]
             out_author_dict['papers_keywords_counts'] = sorted(list(Counter([item for sublist in out_author_dict['papers_keywords'] \
                 for item in sublist]).items()), key=lambda x: x[1], reverse=True)
+
+            out_author_dict['papers_pubtypes'] = [paper['pubtype_list'] for paper in author_papers_pmids_pubtypes.to_dict('records')]
+            out_author_dict['papers_pubtype_counts'] = sorted(list(Counter([item for sublist in out_author_dict['papers_pubtypes'] \
+                for item in sublist]).items()), key=lambda x: x[1], reverse=True)
+
 
             out_dict[author_dict['author']] = out_author_dict
     
