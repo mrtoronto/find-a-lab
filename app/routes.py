@@ -6,24 +6,40 @@ from config import Config
 from werkzeug.urls import url_parse
 from app import app, db
 from app.forms import LoginForm, RegistrationForm, EditProfileForm, \
-    ResetPasswordRequestForm, ResetPasswordForm
-from app.models import User
+    ResetPasswordRequestForm, ResetPasswordForm, authorIndexQueryForm
+from app.models import User, Query
 from app.email import send_password_reset_email
-
+import itertools
 import re
 import ast
+import datetime
+from datetime import timezone
 import pandas as pd
 from app import app
-from app.main_functions import *
+from app.main_api_functions import *
 from collections import Counter
 #from tqdm.notebook import tqdm
 from geotext import GeoText
 import time
 
+def make_string_from_dict(input_dict):
+    output_str = ''
+    for item, value in input_dict.items():
+        output_str += '{"' + str(item) + '" : "' + str(value) + '"},'
+    output_str = output_str[:-1]
+    return output_str
+
+def make_string_from_dict2(input_dict):
+    output_str = ''
+    for item, value in input_dict.items():
+        output_str += str(item) + ' : ' + str(value) + '\n'
+    output_str = output_str[:-1]
+    return output_str
+
 @app.before_request
 def before_request():
     if current_user.is_authenticated:
-        current_user.last_seen = datetime.utcnow()
+        current_user.last_seen = datetime.datetime.now(timezone.utc)
         db.session.commit()
 
 
@@ -128,6 +144,37 @@ def edit_profile():
 
 
 
+@app.route('/query/<query_type>', methods=['GET', 'POST'])
+@login_required
+def make_a_query(query_type):
+    if query_type == 'author_papers':
+        form = authorIndexQueryForm()      
+    elif query_type == 'author_affils':
+        form = authorIndexQueryForm()      
+
+    if form.validate_on_submit() and current_user.is_authenticated:
+        query = Query(query_type = query_type,
+                    query_text = form.query_text.data, 
+                    query_from = form.query_from.data,
+                    query_affiliations=form.affiliations.data, 
+                    query_locations=form.locations.data,
+                    user_querying = current_user.username)
+
+        db.session.add(query)
+        db.session.commit()
+        flash('Your query is running!')
+        results = query_author_papers(query = query.query_text, 
+                                                from_year = query.query_from,
+                                                locations = query.query_locations, 
+                                                n_authors = 25, 
+                                                affils = query.query_affiliations, 
+                                                api_key = form.api_key.data)
+        author_keywords = {author : author_dict['papers_keywords_counts'] for author, author_dict in results.items()}
+        return render_template('query_results.html', json_data = results)
+
+    return render_template('make_a_query.html', form=form)
+
+
 
 #######
 
@@ -169,25 +216,32 @@ def query_author_affils():
 
 
 @app.route('/api/query/author_papers/', methods = ['GET'])
-def query_author_papers():
+
+def query_author_papers(query = "", from_year = "", locations = "", n_authors = "", affils = "", api_key = ""):
 
     timeit_start = time.time()
+    if request.args.get('query'): 
+        query = request.args.get('query')
+    if request.args.get('from'):
+        from_year = int(request.args.get('from', 2000))
+    if request.args.get('locations'):    
+        locations = request.args.get('locations', [])
+    if request.args.get('n', 25):
+        n_authors = request.args.get('n', 25)
+    if request.args.get('affiliations', []):
+        affils = request.args.get('affiliations', [])
+    if request.args.get('api_key'):
+        api_key = request.args.get('api_key')
 
-    query = request.args.get('query')
-    from_year = int(request.args.get('from', 2000))
-    locations = request.args.get('locations', [])
-    n_authors = request.args.get('n', 25)
-    affils = request.args.get('affiliations', [])
     if locations:
         locations = [location.strip().lower() for location in locations.split(',')]
 
     if affils:
         affils = [affil.strip().lower() for affil in affils.split(',')]
 
-    out_dict = query_author_papers_data(query, from_year, locations, affils, n_authors, timeit_start)
+    out_dict = query_author_papers_data(query, from_year, locations, affils, n_authors, timeit_start, api_key)
 
     timeit_end = time.time()
     #print(f'`author_papers_w_location` for "{query}" from {from_year} onward ran in {round(timeit_end - timeit_start,4)} seconds. Returning results.')
     app.logger.info(f'`author_papers_w_location` for "{query}" from {from_year} onward ran in {round(timeit_end - timeit_start,4)} seconds. Returning results.')
-
-    return jsonify(out_dict)
+    return out_dict

@@ -42,3 +42,16 @@ class User(UserMixin, db.Model):
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
+
+
+
+
+class Query(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    query_type = db.Column(db.String(120))
+    query_text = db.Column(db.String(500)) 
+    query_from = db.Column(db.Integer)
+    query_affiliations = db.Column(db.String(250))
+    query_locations = db.Column(db.String(250))
+    user_querying = db.Column(db.String(250))
+    redis_token = db.Column(db.String(400))

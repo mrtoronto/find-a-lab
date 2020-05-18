@@ -58,3 +58,13 @@ class EditProfileForm(FlaskForm):
             user = User.query.filter_by(username=self.username.data).first()
             if user is not None:
                 raise ValidationError('Please use a different username.')
+
+
+
+class authorIndexQueryForm(FlaskForm):
+    query_text = StringField('Query Text', validators=[DataRequired()])
+    query_from = StringField('Query Start Year', validators=[DataRequired()])
+    affiliations =  StringField('Relevant Affiliations')
+    locations = StringField('Relevant Locations')
+    api_key = StringField('PubMed API Key', validators=[DataRequired()])
+    submit = SubmitField('Query')

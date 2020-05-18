@@ -47,9 +47,9 @@ def create_author_affil_list(papers_result):
     Args:
         papers_result - List: Elements in list are dictionaries of data generated from XML parser
     Returns:
-        List: Elements are dictionaries of author-affiliation-paper data points
+        List: Elements are dictionaries of author-affiliation-paper data points containing individual author-affiliation-pmid combinations.
     """
-    authors = []
+    author_affils = []
     ### Loop through papers from results
     for paper_dictionary in papers_result:
         ### Loop through paper's authors
@@ -57,18 +57,17 @@ def create_author_affil_list(papers_result):
             ### Loop through author's affiliations
             for author_affil in author[1]:
                 try:
-                    authors.append({'author_list' : author[0], 
+                    author_affils.append({'author_list' : author[0], 
                                     'author_string' : author[0][2] + ", " + author[0][0],
                                     'affiliations' : author_affil, 
                                     'locations' : get_location(author_affil), 
                                     'title' : paper_dictionary['title'],
                                     'pmid' : paper_dictionary['pmid']
-                                    
                                    })             
                 except Exception as err:
                     print(f"Error making authors entry with {author} and {affil} // {get_location(affil)} \n{err}")
                     pass
-    return authors
+    return author_affils
 
 
 def filter_authors(author_dicts, locations_of_interest, affils_of_interest):
@@ -112,20 +111,32 @@ def filter_authors(author_dicts, locations_of_interest, affils_of_interest):
                     
     return kept_authors
 
-def count_author_affil_locations(author_name, authors_affils, of_interest, affil_loc, n_affiliations):
+def count_author_affil_locations(author_name, authors_affils, affil_loc, n_affiliations):
+    """
+    
 
-    author_affiliations = [paper_author_affil.get(affil_loc) for paper_author_affil in authors_affils \
-                                 if paper_author_affil.get(affil_loc) and paper_author_affil.get('author_string') == author_name]
+
+    Args:
+
+        affil_loc - Str: 'affiliations' or 'locations' to determine which the function is looking at
+    """
+    ### Create a list of *PMID*__*Location/Affiliation* strings from each author-paper-affiliation data point 
+    ### if the data point's author matches `author_name`
+    author_affiliations = [paper_author_affil.get('pmid') + '__' + paper_author_affil.get(affil_loc, '') for paper_author_affil in authors_affils \
+                                 if paper_author_affil.get('author_string') == author_name]
+    
+    ### Count up the number of *PMID*__*Location/Affiliation*
     author_affil_counts = Counter(author_affiliations)
-    reformatted_affiliations = {affil[0] : affil[1] for affil in author_affil_counts.most_common(n_affiliations * 3)}
-    rel_reformatted_affiliations = {affil[0] : affil[1] for affil in \
-                    author_affil_counts.most_common(n_affiliations * 3) if \
-                    re.search(f'({"|".join(of_interest)})', affil[0].lower())}
+    ### Create a dictionary of *Location/Affiliation* : count
+    reformatted_affiliations = {affil[0].split('__')[1] : affil[1] for affil in author_affil_counts.most_common(n_affiliations * 3)}
+    
+    
+    return reformatted_affiliations
 
-    n_papers = sum(list(author_affil_counts.values()))
-
-    return reformatted_affiliations, rel_reformatted_affiliations, n_papers
-
+def count_papers(author_name, authors_affils):
+    author_papers = list(set([paper_author_affil.get('pmid') for paper_author_affil in \
+        authors_affils if paper_author_affil.get('pmid') and paper_author_affil.get('author_string') == author_name]))
+    return len(author_papers)
 
 
 def map_author_to_affil(authors_affils, locations_of_interest, affils_of_interest, n_affiliations=3):
@@ -150,30 +161,14 @@ def map_author_to_affil(authors_affils, locations_of_interest, affils_of_interes
 
     for author_name in author_list:
 
-        reformatted_affiliations, rel_reformatted_affiliations, _ = count_author_affil_locations(author_name, authors_affils, \
-                                                        affils_of_interest, 'affiliations', n_affiliations)
-
-        reformatted_locations, rel_reformatted_locations, n_papers = count_author_affil_locations(author_name, authors_affils, \
-                                                        locations_of_interest, 'locations', n_affiliations)
-        
-
         author_locs_affils.append({'author' : author_name, 
-                                   'total_papers' : n_papers,
-                                   'locations' : reformatted_locations,
-                                   'affiliations' : reformatted_affiliations, 
-                                   'relevant_locations' : rel_reformatted_locations, 
-                                   'relevant_affiliations' : rel_reformatted_affiliations})
+                                   'total_papers' : count_papers(author_name, authors_affils),
+                                   'locations' : count_author_affil_locations(author_name, authors_affils, 'locations', n_affiliations),
+                                   'affiliations' : count_author_affil_locations(author_name, authors_affils, 'affiliations', n_affiliations)
+                                   })
 
-    ### Filter authors down to authors matching locations/affiliations of interest
-    ### Does not filter if there is no places of interest
-    original_n_author = len(author_locs_affils)
-    kept_authors = filter_authors(author_locs_affils, locations_of_interest = locations_of_interest, 
-                                                    affils_of_interest = affils_of_interest)
-    post_n_author = len(kept_authors)
-    if post_n_author == 0 and original_n_author != 0:
-        return kept_authors, top_authors, True
-    else:
-        return kept_authors, top_authors, False 
+    return author_locs_affils, top_authors, False 
+
 def author_affil_total_df(affiliations_by_author, n_authors=25):
     """
     Combines data from previous steps to generate a dataframe of top publishing authors and their most frequently
@@ -227,19 +222,21 @@ def get_authors_papers(author_of_interest, authors_affils, papers_result):
 
 
 def get_top_authors_papers(top_authors, authors_affils, papers_result):
-    paper_top_author_list = []
+    paper_top_author_dict = {}
     for author_of_interest in top_authors:
         matchedPapers_dicts = get_authors_papers(author_of_interest, authors_affils, papers_result)
         for matchedPaper in matchedPapers_dicts:
-            top_paper = {'author' : author_of_interest, 
-                         'title' : matchedPaper['title'], 
-                         'pubdate' : matchedPaper['pubdate'], 
-                         'link' : matchedPaper['link'], 
-                         'pmid' : matchedPaper['pmid'],
-                         'pubtype_list' : matchedPaper['pub_type_list'],
-                         'all_authors_list' : [author_affil[0][2] + ', ' + author_affil[0][0] for author_affil in matchedPaper['author_list']], 
-                         'mesh_keywords' : matchedPaper['mesh_keywords'],
-                         'other_ids' : matchedPaper['other_ids']}
+            paper_top_author_dict[f"{author_of_interest}_{matchedPaper['pmid']}"] = {
+                        'author' : author_of_interest, 
+                        'title' : matchedPaper['title'], 
+                        'pubdate' : matchedPaper['pubdate'], 
+                        'link' : matchedPaper['link'], 
+                        'pmid' : matchedPaper['pmid'],
+                        'pubtype_list' : ",".join(matchedPaper['pub_type_list']),
+                        'all_authors_list' : ",".join([author_affil[0][2] + ', ' + author_affil[0][0] for author_affil in matchedPaper['author_list']]), 
+                        'mesh_keywords' : list(matchedPaper['mesh_keywords'].keys()),
+                        'other_ids' : ",".join(matchedPaper['other_ids'].values())
+                        }
 
-            paper_top_author_list.append(top_paper)
-    return paper_top_author_list
+            
+    return paper_top_author_dict

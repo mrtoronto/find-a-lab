@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+<center><h1>Submit a Query</h1></center>
+<br>
+{{ wtf.quick_form(form) }}
+{% endblock %}

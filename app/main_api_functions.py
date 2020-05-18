@@ -1,6 +1,7 @@
 from app.util_functions import *
 from app.pubmed_scraper_parser import get_article_ids
 from config import Config
+import itertools
 
 
 def query_author_affils_data(query, from_year, locations, n_authors, timeit_start):
@@ -39,16 +40,15 @@ def query_author_affils_data(query, from_year, locations, n_authors, timeit_star
     return author_df
 
 
-def query_author_papers_data(query, from_year, locations, affils, n_authors, timeit_start):
+def query_author_papers_data(query, from_year, locations, affils, n_authors, timeit_start, api_key):
     
     response, count_results = get_article_ids(query, sort = 'relevance', from_year = from_year, 
                     locations = locations, affils = affils,
-                    api_key="9f66a38099f29d882365afb5ea170b1ef608", time_start = timeit_start)
+                    time_start = timeit_start, api_key = api_key)
     papers_result = response.to_dict('records')
     if len(papers_result) == 0:
         papers_result = pd.DataFrame([f"Query returned no results after filtering. Try again with less specific query terms. This query had {count_results} results and the current max is set to {Config.MAX_RESULTS}. I apologize for this limit. Making websites is harder than you'd think."])
         return papers_result.to_dict('records')
-    print(len(papers_result))
     ### If query length was > MAX_RESULT setting
     if len(papers_result) == 1:
         return papers_result
@@ -58,11 +58,11 @@ def query_author_papers_data(query, from_year, locations, affils, n_authors, tim
                             locations_of_interest = locations, affils_of_interest = affils, n_affiliations = 5)
     #Get papers for top 25 authors
 
-    paper_top_author_list = get_top_authors_papers(top_authors, authors_affils, papers_result)
+    paper_top_author_dict = get_top_authors_papers(top_authors, authors_affils, papers_result)
 
     print(f"Matched papers found in {round(time.time() - timeit_start, 4)} seconds.")
 
-    paper_top_author_df = pd.DataFrame(paper_top_author_list)
+    paper_top_author_df = pd.DataFrame(paper_top_author_dict).T
     affiliations_df = pd.DataFrame([{'author': author_affil_dict['author_string'], 
                                     'pmid' : author_affil_dict['pmid'],
                                     'location' : author_affil_dict['locations'],
@@ -77,39 +77,21 @@ def query_author_papers_data(query, from_year, locations, affils, n_authors, tim
     if affiliations_by_author:
         for author_dict in affiliations_by_author:
             author_papers_df = big_df.loc[big_df['author'] == author_dict['author'], :]
-            if locations:
-                n_relevant_papers_loc = len([location for location in author_papers_df['location'] if re.search(locations_regex, location.lower().strip())])
-            else:
-                n_relevant_papers_loc = 0
-            if affils:
-                n_relevant_papers_afil = len([affiliation for affiliation in author_papers_df['affiliation'] if re.search(affils_regex, affiliation.lower().strip())])
-            else:
-                n_relevant_papers_afil = 0
+            author_papers_titles_links = big_df.loc[big_df['author'] == author_dict['author'], ['pmid', 'title', 'link']].drop_duplicates()
+            author_papers_pmids_keywords = big_df.loc[big_df['author'] == author_dict['author'], ['pmid', 'mesh_keywords']].drop_duplicates(subset=['pmid'])
 
             out_author_dict = {'author' : author_dict['author'], 
                             'total_count' : author_dict['total_papers'],
                             'affiliations' : author_dict['affiliations'],
                             'locations' : author_dict['locations']}
-            if not locations and not affils:
-                pass
-            elif locations and not affils:
-                out_author_dict['location_relevant_count'] = n_relevant_papers_loc
-                out_author_dict['relevant_locations'] = author_dict['relevant_locations']
-            elif affils and not locations:
-                out_author_dict['affiliation_relevant_count'] = n_relevant_papers_afil
-                out_author_dict['relevant_affiliations'] = author_dict['relevant_affiliations']
-            else:
-                out_author_dict['affiliation_relevant_count'] = n_relevant_papers_afil
-                out_author_dict['location_relevant_count'] = n_relevant_papers_loc
-                out_author_dict['relevant_affiliations'] = author_dict['relevant_affiliations']
-                out_author_dict['relevant_locations'] = author_dict['relevant_locations']
-            out_author_dict['papers_dict'] = big_df.loc[big_df['author'] == author_dict['author'], :].to_dict('records')
+
+            out_author_dict['papers_dict'] = big_df.loc[big_df['author'] == author_dict['author'], :].drop_duplicates(subset=['pmid']).to_dict('records')
+            out_author_dict['papers_links'] = author_papers_titles_links.to_dict('records')
+            out_author_dict['papers_keywords'] = [paper['mesh_keywords'] for paper in author_papers_pmids_keywords.to_dict('records')]
+            out_author_dict['papers_keywords_counts'] = sorted(list(Counter([item for sublist in out_author_dict['papers_keywords'] \
+                for item in sublist]).items()), key=lambda x: x[1], reverse=True)
 
             out_dict[author_dict['author']] = out_author_dict
-        if locations:
-            out_dict = {k:v for (k,v) in sorted(out_dict.items(), key=lambda item: item[1]['location_relevant_count'], reverse=True)}
-        elif affils:
-            out_dict = {k:v for (k,v) in sorted(out_dict.items(), key=lambda item: item[1]['affiliation_relevant_count'], reverse=True)}
     
     elif fully_filtered_flag:
         out_dict = {'error' : 'There were results but they were filtered by your location/affiliation criteria.'}

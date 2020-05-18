@@ -1,7 +1,55 @@
+<head>
+    <style>
+    /* Dropdown Button */
+    .dropbtn {
+      padding: 16px;
+      font-size: 12px;
+      border: none;
+    }
+        /* The container <div> - needed to position the dropdown content */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    /* Dropdown Content (Hidden by Default) */
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: #f4f4f4;
+      min-width: 160px;
+      box-shadow: 0px 2px 4px 0px rgba(0,0,0,0.2);
+      z-index: 1;
+    }
+
+    /* Links inside the dropdown */
+    .dropdown-content a {
+      color: black;
+      padding: 12px 16px;
+      text-decoration: none;
+      display: block;
+    }
+
+    /* Change color of dropdown links on hover */
+    .dropdown-content a:hover {background-color: #766C7F; color:#FAF6DB;}
+
+    /* Show the dropdown menu on hover */
+    .dropdown:hover .dropdown-content {display: block;}
+
+    /* Change the background color of the dropdown button when the dropdown content is shown */
+    .dropdown:hover 
+    .dropbtn {color:#FAF6DB; background-color: #766C7F;} 
+
+    li {font-size:12px;}
+
+    .navbar_colored {color:#FAF6DB; background-color: #766C7F;}
+    </style>
+</head>
+
 {% extends 'bootstrap/base.html' %}
 
 {% block title %}
-    {% if title %}{{ title }} - Microblog{% else %}Welcome to Microblog{% endif %}
+    {% if title %}{{ title }} - FindALab{% else %}Welcome to FindALab{% endif %}
 {% endblock %}
 
 {% block navbar %}
@@ -20,6 +68,17 @@
                 <ul class="nav navbar-nav">
                     <li><a href="{{ url_for('index') }}">Home</a></li>
                     <li><a href="">Explore</a></li>
+                    <li>
+                        <div class="dropdown">
+                            <button class="dropbtn">Results sorted by...</button>
+                            <div class="dropdown-content">
+                                <a href="{{ url_for('make_a_query', query_type = 'author_papers') }}" title="">Author</a>
+                                <a href="" title="">Affiliation</a>
+                                <a href="" title="">Location</a>
+                                <a href="" title="">Topic Area</a>
+                            </div>
+                        </div>
+                    </li>
                 </ul>
                 <ul class="nav navbar-nav navbar-right">
                     {% if current_user.is_anonymous %}
