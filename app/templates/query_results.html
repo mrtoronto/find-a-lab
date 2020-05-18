@@ -40,8 +40,8 @@
 			            <th class="tableCell">Author Name</th>
 			            <th class="tableCell">N Papers in Query</th>
 			            <th class="tableCell">Locations</th>
-			            <th class="tableCell">Linked Papers</th>
 			            <th class="tableCell">Queried Papers' Keywords</th>
+			            <th class="tableCell">Linked Papers</th>
 			            <th class="tableCell">Queried Papers' Pubtypes</th>
 			            <th class="tableCell">Affiliations (n) (truncated)</th>
 			        </tr>
@@ -61,17 +61,17 @@
 			            {% endfor %}
 			        	</td>
 			            <td class="tableCell">
+				            {% for keyword, count in author_dict['papers_keywords_counts'][:25] %}
+								<br>{{ keyword }} ({{ count }})
+							{% endfor %}
+			        	</td>
+			            <td class="tableCell">
 				            {% for paper in author_dict['papers_links'] %}
 				            <br>
 				            <a title= "{{ paper['title'] }}" href= "{{ paper['link'] }}">
 				            	{{ paper['title'] }}
 			            	</a>
 				        	{% endfor %}
-			        	</td>
-			            <td class="tableCell">
-				            {% for keyword, count in author_dict['papers_keywords_counts'][:25] %}
-								<br>{{ keyword }} ({{ count }})
-							{% endfor %}
 			        	</td>
 			            <td class="tableCell">
 				            {% for pubtype, count in author_dict['papers_pubtype_counts'] %}
@@ -99,7 +99,6 @@
 	<script type="text/javascript" src="/static/tabulator.js"></script>
 	<script type="text/javascript" src="/static/jquery-3.5.1.min.js"></script>
 	<script type="text/javascript" src="/static/jquery-ui.min.js"></script>
-	<script type="text/javascript" src="/static/format.js"></script>
 	<script type="text/javascript" src="/static/bootstrap.min.js"></script>    
     
     <script type="text/javascript"> 
@@ -114,8 +113,8 @@
 		{title:"Author Name", field:"author", formatter:"html", width:200, responsive:0},
     	{title:"N Papers in Query", field:"n papers", width:50, responsive:0},
     	{title:"Locations", field:"locations", formatter:"html", width:200},
-    	{title:"Linked Papers", field:"papers", formatter:"html", width:600},
     	{title:"Queried Papers' Keywords", field:"paper keywords", formatter:"html", width:400},
+    	{title:"Linked Papers", field:"papers", formatter:"html", width:600},
     	{title:"Queried Papers' Pubtypes", field:"paper pubtypes", formatter:"html", width:400},
     	{title:"Affiliations (n) (truncated)", field:"affiliations", formatter:"html", width:400},
     ]
