@@ -145,7 +145,7 @@ def edit_profile():
 
 
 @app.route('/query/<query_type>', methods=['GET', 'POST'])
-@login_required
+#@login_required
 def make_a_query(query_type):
     if query_type == 'author_papers':
         form = authorIndexQueryForm()      
@@ -158,7 +158,7 @@ def make_a_query(query_type):
                     query_from = form.query_from.data,
                     query_affiliations=form.affiliations.data, 
                     query_locations=form.locations.data,
-                    user_querying = current_user.username)
+                    user_querying = current_user.username or '')
 
         db.session.add(query)
         db.session.commit()
