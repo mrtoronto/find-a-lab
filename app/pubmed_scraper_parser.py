@@ -153,7 +153,7 @@ def get_article_ids(query, sort, locations, affils, from_year = "",
 
     print(f'Query for "{query}" from {from_year} started {round(time.time() - time_start, 4)} seconds ago has {str(count_results)} results. Downloading now.')
     parsed_papers = []
-    if count_results > Config.MAX_RESULTS:
+    if count_results > int(Config.MAX_RESULTS):
         papers_result = pd.DataFrame([f"Query too large. Try again with more specific query terms. This query had {count_results} results and the current max is set to {Config.MAX_RESULTS}. I apologize for this limit. Making websites is harder than you'd think."])
     else:
         ### Get Abstracts with efetch
