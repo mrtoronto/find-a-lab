@@ -8,6 +8,7 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_bootstrap import Bootstrap
 from config import Config
+from flask_babel import Babel
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -15,6 +16,7 @@ login = LoginManager()
 login.login_view = 'login'
 mail = Mail()
 bootstrap = Bootstrap()
+babel = Babel()
 
 
 def create_app(config_class=Config):
@@ -26,8 +28,12 @@ def create_app(config_class=Config):
     login.init_app(app)
     mail.init_app(app)
     bootstrap.init_app(app)
+    babel.init_app(app)
     ### Redis 
     ### Task quene
+
+    from app.auth import bp as auth_bp
+    app.register_blueprint(auth_bp, url_prefix='/auth')
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
@@ -35,8 +41,8 @@ def create_app(config_class=Config):
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)
 
-    #from app.api import bp as api_bp
-    #app.register_blueprint(api_bp, url_prefix='/api')
+    from app.api import bp as api_bp
+    app.register_blueprint(api_bp, url_prefix='/api')
 
 
     if not app.debug:
