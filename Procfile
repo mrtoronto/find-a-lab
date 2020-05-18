@@ -1,1 +1,1 @@
-web: web: flask db upgrade; gunicorn app:app --timeout 180
+web: flask db upgrade; gunicorn app:app --timeout 180
