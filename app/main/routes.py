@@ -91,7 +91,8 @@ def make_a_query(query_type):
 
         if len(results) == 1:
             return render_template('errors/data_error.html', data = list(results[0].values())[0])
-        return render_template('query_results.html', data = results)
+        n_results = sum([author_dict['total_count'] for author_dict in results.values()])
+        return render_template('query_results.html', data = results, n_results = n_results)
 
     return render_template('make_a_query.html', form=form)
 
