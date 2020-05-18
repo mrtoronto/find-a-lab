@@ -17,23 +17,9 @@ from datetime import timezone
 import pandas as pd
 from app.main_api_functions import *
 from collections import Counter
-#from tqdm.notebook import tqdm
 from geotext import GeoText
 import time
 
-def make_string_from_dict(input_dict):
-    output_str = ''
-    for item, value in input_dict.items():
-        output_str += '{"' + str(item) + '" : "' + str(value) + '"},'
-    output_str = output_str[:-1]
-    return output_str
-
-def make_string_from_dict2(input_dict):
-    output_str = ''
-    for item, value in input_dict.items():
-        output_str += str(item) + ' : ' + str(value) + '\n'
-    output_str = output_str[:-1]
-    return output_str
 
 @app.before_request
 def before_request():
@@ -41,81 +27,6 @@ def before_request():
         current_user.last_seen = datetime.datetime.now(timezone.utc)
         db.session.commit()
 
-
-@app.route('/', methods=['GET', 'POST'])
-@app.route('/index', methods=['GET', 'POST'])
-def index():
-    return render_template('index.html')
-
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user is None or not user.check_password(form.password.data):
-            flash('Invalid username or password')
-            return redirect(url_for('login'))
-        login_user(user, remember=form.remember_me.data)
-        next_page = request.args.get('next')
-        if not next_page or url_parse(next_page).netloc != '':
-            next_page = url_for('index')
-        return redirect(next_page)
-    return render_template('login.html', title='Sign In', form=form)
-
-
-@app.route('/logout')
-def logout():
-    logout_user()
-    return redirect(url_for('index'))
-
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    form = RegistrationForm()
-    if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data)
-        user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
-        flash('Congratulations, you are now a registered user!')
-        return redirect(url_for('login'))
-    return render_template('register.html', title='Register', form=form)
-
-
-@app.route('/reset_password_request', methods=['GET', 'POST'])
-def reset_password_request():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    form = ResetPasswordRequestForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        if user:
-            send_password_reset_email(user)
-        flash('Check your email for the instructions to reset your password')
-        return redirect(url_for('login'))
-    return render_template('reset_password_request.html',
-                           title='Reset Password', form=form)
-
-
-@app.route('/reset_password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    user = User.verify_reset_password_token(token)
-    if not user:
-        return redirect(url_for('index'))
-    form = ResetPasswordForm()
-    if form.validate_on_submit():
-        user.set_password(form.password.data)
-        db.session.commit()
-        flash('Your password has been reset.')
-        return redirect(url_for('login'))
-    return render_template('reset_password.html', form=form)
 
 
 @app.route('/user/<username>')
@@ -144,7 +55,7 @@ def edit_profile():
 
 
 @app.route('/query/<query_type>', methods=['GET', 'POST'])
-#@login_required
+@login_required
 def make_a_query(query_type):
     if query_type == 'author_papers':
         form = authorIndexQueryForm()      
@@ -157,7 +68,7 @@ def make_a_query(query_type):
                     query_from = form.query_from.data,
                     query_affiliations=form.affiliations.data, 
                     query_locations=form.locations.data,
-                    user_querying = current_user.username or '')
+                    user_querying = current_user.username)
 
         db.session.add(query)
         db.session.commit()
