@@ -2,7 +2,10 @@
 {% block app_content %}
 
 <h1>An error occured due to the size of your query.</h1>
-<p>Error details can be found below. Sorry but please try again! </p>
+<h3>Query Parameters:</h3>
+<i><p>text={{ query_text }}&from={{ query_from }}&locations={{ query_location }}&affiliation={{ query_affiliations }}</p></i>
+<br>
+<h3>Error details can be found below. Sorry but please do try again! </h3>
 <br>
 <i><p>  {{ data }} </p></i>
 

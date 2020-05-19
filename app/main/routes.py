@@ -72,7 +72,7 @@ def make_a_query(query_type):
 
     if form.validate_on_submit() :
         flash('Your query is running!')
-        results = query_author_papers(query = form.query_text.data, 
+        author_dicts = query_author_papers(query = form.query_text.data, 
                                                 from_year = form.query_from.data,
                                                 locations = form.locations.data, 
                                                 n_authors = 25, 
@@ -84,15 +84,18 @@ def make_a_query(query_type):
             query_affiliations=form.affiliations.data, 
             query_locations=form.locations.data,
             user_querying = current_user.username,
-            length_of_results = len(results))
+            length_of_results = len(author_dicts.keys()))
 
         db.session.add(query)
         db.session.commit()
-
-        if len(results) == 1:
-            return render_template('errors/data_error.html', data = list(results[0].values())[0])
-        n_results = sum([author_dict['total_count'] for author_dict in results.values()])
-        return render_template('query_results.html', data = results, n_results = n_results)
+        print(author_dicts)
+        if author_dicts.get('error'):
+            return render_template('errors/data_error.html', data = author_dicts.get('error'), 
+                    query_text = query.query_text, query_from = query.query_from , 
+                    query_location =  query.query_locations, query_affiliations = query.query_affiliations)
+        
+        n_results = sum([author_dict['total_count'] for author_dict in author_dicts.values()])
+        return render_template('query_results.html', data = author_dicts, n_results = n_results)
 
     return render_template('make_a_query.html', form=form)
 

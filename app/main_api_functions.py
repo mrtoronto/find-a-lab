@@ -21,7 +21,7 @@ def query_author_affils_data(query, from_year, locations, n_authors, timeit_star
     if len(papers_result) == 1:
         return papers_result
     if len(papers_result) == 0:
-        papers_result = pd.DataFrame([f"Query returned no results after filtering. Try again with less specific query terms. This query had {count_results} results and the current max is set to {Config.MAX_RESULTS}. I apologize for this limit. Making websites is harder than you'd think."])
+        papers_result = pd.DataFrame(['error', f"Query returned no results after filtering. Try again with less specific query terms. This query had {count_results} results and the current max is set to {Config.MAX_RESULTS}. I apologize for this limit. Making websites is harder than you'd think."])
         return papers_result.to_dict('records')
     print(len(papers_result))
     #affiliations_result = response[1]
@@ -47,11 +47,11 @@ def query_author_papers_data(query, from_year, locations, affils, n_authors, tim
                     time_start = timeit_start, api_key = api_key)
     papers_result = response.to_dict('records')
     if len(papers_result) == 0:
-        papers_result = pd.DataFrame([f"Query returned no results after filtering. Try again with less specific query terms. This query had {count_results} results and the current max is set to {Config.MAX_RESULTS}. I apologize for this limit. Making websites is harder than you'd think."])
-        return papers_result.to_dict('records')
+        papers_result = pd.DataFrame([])
+        return {'error' : f"Query returned no results after filtering. Try again with less specific query terms. "}
     ### If query length was > MAX_RESULT setting
-    if len(papers_result) == 1:
-        return papers_result
+    #if papers_result[0] == 'error':
+    #    return papers_result
 
     authors_affils = create_author_affil_list(papers_result)
     affiliations_by_author, top_authors, fully_filtered_flag = map_author_to_affil(authors_affils, 
