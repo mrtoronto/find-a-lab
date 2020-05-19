@@ -9,6 +9,12 @@ import time
 import re
 import itertools
 
+def preprocess(text):
+    if text:
+        text = re.sub('[,\.\d]', '', text.lower().strip())
+        text = re.sub(' +', ' ', text.lower().strip())
+    return text
+
 def get_location(affiliation):
     """
     Function takes an affiliation string and attempts to extract a location. 
@@ -36,7 +42,7 @@ def get_location(affiliation):
     return locations
 
 
-def create_author_affil_list(papers_result):
+def create_paper_author_affil_index(papers_data):
     """
     Create a list of dictionaries where each element represents an author + paper + affiliation combination. 
         - Multi-author papers and multiple affiliation authors will each generate 
@@ -45,13 +51,13 @@ def create_author_affil_list(papers_result):
     If any errors, print the error and the author/affiliation to the console and skip. 
 
     Args:
-        papers_result - List: Elements in list are dictionaries of data generated from XML parser
+        papers_data - List: Elements in list are dictionaries of data generated from XML parser
     Returns:
         List: Elements are dictionaries of author-affiliation-paper data points containing individual author-affiliation-pmid combinations.
     """
     author_affils = []
     ### Loop through papers from results
-    for paper_dictionary in papers_result:
+    for paper_dictionary in papers_data:
         ### Loop through paper's authors
         for author in paper_dictionary['author_list']:
             ### Loop through author's affiliations
@@ -70,48 +76,7 @@ def create_author_affil_list(papers_result):
     return author_affils
 
 
-def filter_authors(author_dicts, locations_of_interest, affils_of_interest):
-    """
-    Given a list of author's affiliations and the user's locations of interest, filter the affiliations
-    to only contain locations the user is interested in.
-    
-    Args:
-        author_dicts - 
-        locations_of_interest - List: Hardcoded list of interesting locations
-    Returns:
-        
-    """
-    kept_authors = []
-    ### Loop through authors
-    if locations_of_interest or affils_of_interest:
-        for author_dict in author_dicts:
-            ### Flag to prevent duplicate keeps
-            kept_author_flag = False
-            if locations_of_interest:
-                for author_location in author_dict['locations'].keys():
-                    for location_of_interest in locations_of_interest:
-                        if re.search(location_of_interest.lower().strip(), author_location.lower().strip()):
-                            if kept_author_flag == False:
-                                kept_authors.append(author_dict)
-                                kept_author_flag = True
-                            else:
-                                pass
-
-            if affils_of_interest:
-                for author_affil in author_dict['affiliations'].keys():
-                    for affil_of_interest in affils_of_interest:
-                        if re.search(affil_of_interest.lower().strip(), author_affil.lower().strip()):
-                            if kept_author_flag == False:
-                                kept_authors.append(author_dict)
-                                kept_author_flag = True
-                            else:
-                                pass
-    else:
-        kept_authors = author_dicts
-                    
-    return kept_authors
-
-def count_author_affil_locations(author_name, authors_affils, affil_loc, n_affiliations):
+def count_obj_occurance(matching_value, obj_key, paa_cross_mapping, pmid_suffix, n_affiliations):
     """
     
 
@@ -122,8 +87,12 @@ def count_author_affil_locations(author_name, authors_affils, affil_loc, n_affil
     """
     ### Create a list of *PMID*__*Location/Affiliation* strings from each author-paper-affiliation data point 
     ### if the data point's author matches `author_name`
-    author_affiliations = [paper_author_affil.get('pmid') + '__' + paper_author_affil.get(affil_loc, '') for paper_author_affil in authors_affils \
-                                 if paper_author_affil.get('author_string') == author_name]
+    if obj_key == 'affiliations' and obj_key == 'affiliations':
+        author_affiliations = [paper_data.get('pmid') + '__' + paper_data.get(pmid_suffix, '') for paper_data in paa_cross_mapping \
+                                 if preprocess(paper_data.get(obj_key)) == matching_value]
+    else:
+        author_affiliations = [paper_data.get('pmid') + '__' + paper_data.get(pmid_suffix, '') for paper_data in paa_cross_mapping \
+                                 if paper_data.get(obj_key) == matching_value]
     
     ### Count up the number of *PMID*__*Location/Affiliation*
     author_affil_counts = Counter(author_affiliations)
@@ -144,27 +113,38 @@ def count_author_affil_locations(author_name, authors_affils, affil_loc, n_affil
     
     return reformatted_affiliations
 
-def count_papers(author_name, authors_affils):
-    author_papers = list(set([paper_author_affil.get('pmid') for paper_author_affil in \
-        authors_affils if paper_author_affil.get('pmid') and paper_author_affil.get('author_string') == author_name]))
+def count_papers(matching_value, papers_data, matching_field):
+    author_papers = list(set([paper_data.get('pmid') for paper_data in \
+        papers_data if paper_data.get('pmid') and preprocess(paper_data.get(matching_field)) == matching_value]))
     return len(author_papers)
 
 
-def map_author_to_affil(authors_affils, locations_of_interest, affils_of_interest, n_affiliations=3):
+def map_author_to_affil(papers_data, n_affiliations=3):
     """
     Get `n` most common authors, find their top 3 affiliations and their geographic locations. 
     
     Filter list of authors by whether one of their affiliation locations lands in a location_of_interest
     
     Args:
+        author_affils - List: Looks like;
+            [
+                {
+                'author_list' : author[0], 
+                'author_string' : author[0][2] + ", " + author[0][0],
+                'affiliations' : author_affil, 
+                'locations' : get_location(author_affil), 
+                'title' : paper_dictionary['title'],
+                'pmid' : paper_dictionary['pmid']
+                }
+            ]
     
     Returns:
         List - List elements are dictionaries containing data on an author's top 3 affiliations 
             if they land in the supplied `locations_of_interest`. 
     """
 
-    author_affil_df = pd.DataFrame(authors_affils)
-    top_authors = dict(Counter(author_affil_df['author_string']).most_common(200))
+    papers_df = pd.DataFrame(papers_data)
+    top_authors = dict(Counter(papers_df['author_string']).most_common(200))
     #Get Affiliations for Top 200 Authors
     author_locs_affils = []
     ### Count up most common authors
@@ -173,12 +153,95 @@ def map_author_to_affil(authors_affils, locations_of_interest, affils_of_interes
     for author_name in author_list:
 
         author_locs_affils.append({'author' : author_name, 
-                                   'total_papers' : count_papers(author_name, authors_affils),
-                                   'locations' : count_author_affil_locations(author_name, authors_affils, 'locations', n_affiliations),
-                                   'affiliations' : count_author_affil_locations(author_name, authors_affils, 'affiliations', n_affiliations)
+                                   'total_papers' : count_papers(author_name, papers_data, 'author_string'),
+                                   'locations' : count_obj_occurance(
+                                                matching_value=author_name, 
+                                                papers_data=papers_data, 
+                                                pmid_suffix='locations', 
+                                                n_affiliations=n_affiliations, 
+                                                obj_key='author_string'),
+                                   'affiliations' : count_obj_occurance(
+                                                matching_value=author_name, 
+                                                papers_data=papers_data, 
+                                                pmid_suffix='affiliations', 
+                                                n_affiliations=n_affiliations, 
+                                                obj_key='author_string')
                                    })
 
-    return author_locs_affils, top_authors, False 
+    return author_locs_affils, top_authors 
+
+def group_papers_by_top_obj(paa_cross_mapping, obj_key, n_affiliations=3):
+    """
+    Get `n` most common authors, find their top 3 affiliations and their geographic locations. 
+    
+    Filter list of authors by whether one of their affiliation locations lands in a location_of_interest
+    
+    Args:
+        author_affils - List: Looks like;
+            [
+                {
+                'author_list' : author[0], 
+                'author_string' : author[0][2] + ", " + author[0][0],
+                'affiliations' : author_affil, 
+                'locations' : get_location(author_affil), 
+                'title' : paper_dictionary['title'],
+                'pmid' : paper_dictionary['pmid']
+                }
+            ]
+        Options for obj_key are: `affiliations` or ...
+    Returns:
+        List - List elements are dictionaries containing data on an author's top 3 affiliations 
+            if they land in the supplied `locations_of_interest`. 
+    """
+
+    obj_list = pd.DataFrame(paa_cross_mapping)[obj_key]
+    if obj_key == 'affiliations':
+        obj_list = [preprocess(affil) for affil in obj_list]
+    top_objs = dict(Counter(obj_list).most_common(200))
+    #Get Affiliations for Top 200 Authors
+    out_list = []
+    ### Count up most common authors
+    top_obj_list = list(top_objs.keys())
+
+
+    for affil in top_obj_list:
+        obj_dict = {}
+        if obj_key == 'affiliations':
+            obj_dict = {'proc_Affiliation' : affil, 
+               'total_papers' : count_papers(affil, paa_cross_mapping, 'affiliations'),
+               'authors' : count_obj_occurance(
+                            matching_value=affil, 
+                            paa_cross_mapping=paa_cross_mapping, 
+                            pmid_suffix='author_string', 
+                            n_affiliations=n_affiliations, 
+                            obj_key='affiliations'),
+               'raw_affiliations' : count_obj_occurance(
+                            matching_value=affil, 
+                            paa_cross_mapping=paa_cross_mapping, 
+                            pmid_suffix='affiliations', 
+                            n_affiliations=n_affiliations, 
+                            obj_key='affiliations')}
+
+        elif obj_key == 'author_string':
+            obj_dict = {'author' : author_name, 
+                        'total_papers' : count_papers(author_name, paa_cross_mapping, 'author_string'),
+                        'locations' : count_obj_occurance(
+                            matching_value=author_name, 
+                            paa_cross_mapping=paa_cross_mapping, 
+                            pmid_suffix='locations', 
+                            n_affiliations=n_affiliations, 
+                            obj_key='author_string'),
+                        'affiliations' : count_obj_occurance(
+                            matching_value=author_name, 
+                            paa_cross_mapping=paa_cross_mapping, 
+                            pmid_suffix='affiliations', 
+                            n_affiliations=n_affiliations, 
+                            obj_key='author_string')
+                        }
+
+        out_list.append(obj_dict)
+
+    return out_list, top_obj_list 
 
 def author_affil_total_df(affiliations_by_author, n_authors=25):
     """
@@ -210,18 +273,21 @@ def author_affil_total_df(affiliations_by_author, n_authors=25):
     return out_df.head(n_authors)
 
 
-def get_authors_papers(author_of_interest, authors_affils, papers_result):
-    author_pmids = [{'author': author_affil_dict['author_string'], \
+def get_obj_papers(obj_of_interest, obj_key, authors_affils, papers_data):
+    if obj_key == 'affiliations':
+        obj_pmids = [{obj_key: preprocess(author_affil_dict.get(obj_key)), \
                     'pmid' : author_affil_dict['pmid']} for author_affil_dict in authors_affils]
 
+    else:
+        obj_pmids = [{obj_key: author_affil_dict.get(obj_key), \
+                    'pmid' : author_affil_dict['pmid']} for author_affil_dict in authors_affils]
     matching_pmids = []
     ### Find an authors PMIDs
-    for author_pmid in author_pmids:
-        if author_pmid['author'] == author_of_interest:
+    for author_pmid in obj_pmids:
+        if author_pmid[obj_key] == obj_of_interest:
             matching_pmids.append(author_pmid['pmid'])
-
     matching_papers = []
-    for paper in papers_result:
+    for paper in papers_data:
         if paper['pmid'] in matching_pmids:
             matching_papers.append(paper)
 
@@ -232,13 +298,18 @@ def get_authors_papers(author_of_interest, authors_affils, papers_result):
     return matchedPapers_dicts
 
 
-def get_top_authors_papers(top_authors, authors_affils, papers_result):
-    paper_top_author_dict = {}
-    for author_of_interest in top_authors:
-        matchedPapers_dicts = get_authors_papers(author_of_interest, authors_affils, papers_result)
+def get_top_obj_papers(top_objs, authors_affils, papers_data, obj_key):
+    top_obj_papers = {}
+    for obj_of_interest in top_objs:
+        raw_obj_of_interest = obj_of_interest
+        if obj_key == 'affiliations':
+            obj_of_interest = preprocess(obj_of_interest)
+        matchedPapers_dicts = get_obj_papers(obj_of_interest=obj_of_interest, obj_key = obj_key, 
+                                            authors_affils=authors_affils, papers_data=papers_data)
         for matchedPaper in matchedPapers_dicts:
-            paper_top_author_dict[f"{author_of_interest}_{matchedPaper['pmid']}"] = {
-                        'author' : author_of_interest, 
+            top_obj_papers[f"{obj_of_interest}_{matchedPaper['pmid']}"] = {
+                        'join_obj' : obj_of_interest, 
+                        'raw_join_obj' : raw_obj_of_interest,
                         'title' : matchedPaper['title'], 
                         'pubdate' : matchedPaper['pubdate'], 
                         'link' : matchedPaper['link'], 
@@ -250,4 +321,4 @@ def get_top_authors_papers(top_authors, authors_affils, papers_result):
                         }
 
             
-    return paper_top_author_dict
+    return top_obj_papers

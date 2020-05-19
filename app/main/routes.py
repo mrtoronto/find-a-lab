@@ -67,35 +67,61 @@ def edit_profile():
 def make_a_query(query_type):
     if query_type == 'author_papers':
         form = authorIndexQueryForm()      
-    elif query_type == 'author_affils':
-        form = authorIndexQueryForm()      
+    elif query_type == 'affil_papers':
+        form = authorIndexQueryForm()
 
     if form.validate_on_submit() :
         flash('Your query is running!')
-        author_dicts = query_author_papers(query = form.query_text.data, 
-                                                from_year = form.query_from.data,
-                                                locations = form.locations.data, 
-                                                n_authors = 25, 
-                                                affils = form.affiliations.data, 
-                                                api_key = form.api_key.data)
-        query = Query(query_type = query_type,
-            query_text = form.query_text.data, 
-            query_from = form.query_from.data,
-            query_affiliations=form.affiliations.data, 
-            query_locations=form.locations.data,
-            user_querying = current_user.username,
-            length_of_results = len(author_dicts.keys()))
+        if query_type == 'author_papers':
+            author_dicts = query_author_papers(query = form.query_text.data, 
+                                                    from_year = form.query_from.data,
+                                                    locations = form.locations.data, 
+                                                    n_authors = 25, 
+                                                    affils = form.affiliations.data, 
+                                                    api_key = form.api_key.data,
+                                                    api_out = False)
+            query = Query(query_type = query_type,
+                query_text = form.query_text.data, 
+                query_from = form.query_from.data,
+                query_affiliations=form.affiliations.data, 
+                query_locations=form.locations.data,
+                user_querying = current_user.username,
+                length_of_results = len(author_dicts.keys()))
 
-        db.session.add(query)
-        db.session.commit()
-        print(author_dicts)
-        if author_dicts.get('error'):
-            return render_template('errors/data_error.html', data = author_dicts.get('error'), 
-                    query_text = query.query_text, query_from = query.query_from , 
-                    query_location =  query.query_locations, query_affiliations = query.query_affiliations)
-        
-        n_results = sum([author_dict['total_count'] for author_dict in author_dicts.values()])
-        return render_template('query_results.html', data = author_dicts, n_results = n_results)
+            db.session.add(query)
+            db.session.commit()
+            if author_dicts.get('error'):
+                return render_template('errors/data_error.html', data = author_dicts.get('error'), 
+                        query_text = query.query_text, query_from = query.query_from , 
+                        query_location =  query.query_locations, query_affiliations = query.query_affiliations)
+            
+            n_results = sum([author_dict['total_count'] for author_dict in author_dicts.values()])
+            return render_template('query_results/author_papers.html', data = author_dicts, n_results = n_results)
+        elif query_type == 'affil_papers':
+            affil_dicts = query_affil_papers(query = form.query_text.data, 
+                                            from_year = form.query_from.data,
+                                            locations = form.locations.data, 
+                                            n_authors = 25, 
+                                            affils = form.affiliations.data, 
+                                            api_key = form.api_key.data,
+                                            api_out = False)
+            query = Query(query_type = query_type,
+                query_text = form.query_text.data, 
+                query_from = form.query_from.data,
+                query_affiliations=form.affiliations.data, 
+                query_locations=form.locations.data,
+                user_querying = current_user.username,
+                length_of_results = len(affil_dicts.keys()))
+
+            db.session.add(query)
+            db.session.commit()
+            if affil_dicts.get('error'):
+                return render_template('errors/data_error.html', data = affil_dicts.get('error'), 
+                        query_text = query.query_text, query_from = query.query_from , 
+                        query_location =  query.query_locations, query_affiliations = query.query_affiliations)
+            
+            n_results = sum([affil_dicts['total_count'] for affil_dicts in affil_dicts.values()])
+            return render_template('query_results/affil_papers.html', data = affil_dicts, n_results = n_results)
 
     return render_template('make_a_query.html', form=form)
 
@@ -114,36 +140,58 @@ def help():
             'general_notes' : 'chris smells'}
 
 
-@bp.route('/api/query/author_affils/', methods = ['GET'])
-def query_author_affils():
+@bp.route('/api/query/author_papers/', methods = ['GET'])
+def query_author_papers(query = "", from_year = "", 
+                    locations = "", n_authors = "", 
+                    affils = "", api_key = "", api_out = True):
 
     timeit_start = time.time()
+    if request.args.get('query'): 
+        query = request.args.get('query')
+    if request.args.get('from'):
+        from_year = int(request.args.get('from', 2000))
+    if request.args.get('locations'):    
+        locations = request.args.get('locations', [])
+    if request.args.get('n', 25):
+        n_authors = request.args.get('n', 25)
+    if request.args.get('affiliations', []):
+        affils = request.args.get('affiliations', [])
+    if request.args.get('api_key'):
+        api_key = request.args.get('api_key')
+    if request.args.get('api_out'):
+        api_out = request.args.get('api_out')
 
-    query = request.args.get('query')
-    from_year = int(request.args.get('from'))
-    locations = request.args.get('locations')
-    n_authors = request.args.get('n') or 25
     if locations:
-        locations = [location.strip() for location in locations.split(',')]
-    else:
-        locations = None
+        locations = [location.strip().lower() for location in locations.split(',')]
 
-    author_df = query_author_affils_data(query, from_year, locations, n_authors, timeit_start)
+    if affils:
+        affils = [affil.strip().lower() for affil in affils.split(',')]
 
-    if len(author_df) == 0:
-        abort(404)
-    
+    if not api_key:
+        no_key_dict = {'error' : 'Please supply an API key to run your query under!'}
+        if api_out == True:
+            return jsonify(no_key_dict)
+        else:
+            return no_key_dict 
+
+    out_dict = query_author_papers_data(query, from_year, locations, affils, n_authors, timeit_start, api_key)
+
     timeit_end = time.time()
-    print(f'`author_affils_w_location` for "{query}" from {from_year} onward ran in {round(timeit_end - timeit_start, 4)} seconds. Returning results.')
-    #print(f'`author_affils_w_location` for "{query}" from {from_year} onward ran in {round(timeit_end - timeit_start, 4)} seconds. Returning results.')
+    print(f'`query_author_papers` for "{query}" from {from_year} onward ran in {round(timeit_end - timeit_start,4)} seconds. Returning results.')
+    if api_out == True:
+        return jsonify(out_dict)
+    else:
+        return out_dict
 
-    return jsonify(author_df.to_dict('records'))
 
-
-@bp.route('/api/query/author_papers/', methods = ['GET'])
-
-def query_author_papers(query = "", from_year = "", locations = "", n_authors = "", affils = "", api_key = ""):
-
+@bp.route('/api/query/affil_papers/', methods = ['GET'])
+def query_affil_papers(query = "", 
+                    from_year = "", 
+                    locations = "",
+                    n_authors = "",
+                    affils = "", 
+                    api_key = "",
+                    api_out = True):
     timeit_start = time.time()
     if request.args.get('query'): 
         query = request.args.get('query')
@@ -164,9 +212,19 @@ def query_author_papers(query = "", from_year = "", locations = "", n_authors = 
     if affils:
         affils = [affil.strip().lower() for affil in affils.split(',')]
 
-    out_dict = query_author_papers_data(query, from_year, locations, affils, n_authors, timeit_start, api_key)
+    if not api_key:
+        no_key_dict = {'error' : 'Please supply an API key to run your query under!'}
+        if api_out == True:
+            return jsonify(no_key_dict)
+        else:
+            return no_key_dict 
+
+    out_dict = query_affil_papers_data(query, from_year, locations, affils, n_authors, timeit_start, api_key)
 
     timeit_end = time.time()
     #print(f'`author_papers_w_location` for "{query}" from {from_year} onward ran in {round(timeit_end - timeit_start,4)} seconds. Returning results.')
-    print(f'`author_papers_w_location` for "{query}" from {from_year} onward ran in {round(timeit_end - timeit_start,4)} seconds. Returning results.')
-    return out_dict
+    print(f'`query_affil_papers` for "{query}" from {from_year} onward ran in {round(timeit_end - timeit_start,4)} seconds. Returning results.')
+    if api_out == True:
+        return jsonify(out_dict)
+    else:
+        return out_dict

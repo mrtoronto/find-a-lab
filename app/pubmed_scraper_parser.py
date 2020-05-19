@@ -6,8 +6,22 @@ import datetime
 import time
 import re
 from config import Config
-
 from app.util_functions import *
+
+def query_to_paa_index(query, from_year, locations, affils, api_key, timeit_start):
+    
+    papers_data, count_results = get_article_ids(query, sort = 'relevance', from_year = from_year, 
+                    locations = locations, affils = affils,
+                    time_start = timeit_start, api_key = api_key)
+    if not papers_data:
+        return [{'error' : 'No results returned from query. Trying adding more locations, removing locations entirely or broadening your search terms.'}], ''
+    
+    if papers_data[0].get('error'):
+        return [{'error' : papers_data[0].get('error')}], ''
+
+    paper_author_affil_mapping = create_paper_author_affil_index(papers_data=papers_data)
+
+    return papers_data, paper_author_affil_mapping
 
 def other_id_extract(article_id_list, id_type):
 
@@ -70,11 +84,11 @@ def pubmed_xml_parse(xml_text, locations, affils):
 
         ### Iterate through different parts of the articles
         ### Publication Date
+        art_pubdate = ''
         for PubMedPubDate in article.findall('./PubmedData/History/PubMedPubDate'):
             ### Grab data article was published on PubMed
             if PubMedPubDate.get('PubStatus') == 'pubmed':
-                year = PubMedPubDate.find('./Year').text
-        art_pubdate = year
+                art_pubdate = PubMedPubDate.find('./Year').text
 
         ### Link and PMID
         PMID = article.find('./MedlineCitation/PMID').text
@@ -168,7 +182,7 @@ def get_article_ids(query, sort, locations, affils, from_year = "",
                                                 locations = locations, affils = affils))
 
         papers_result = pd.concat(parsed_papers, axis=0, ignore_index=True)
-    print(f'Query for "{query}" from {from_year} onward has downloaded and been parsed in {round(time.time() - time_start, 4)} seconds. It was filtered to {papers_result.shape[0]} rows.')
+    print(f'Query for "{query}" from {from_year} onward has downloaded and been parsed in {round(time.time() - time_start, 4)} seconds. It was filtered to {count_results} rows.')
 
     return papers_result.to_dict('records'), count_results
 

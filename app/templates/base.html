@@ -73,7 +73,7 @@
                             <button class="dropbtn">Results sorted by...</button>
                             <div class="dropdown-content">
                                 <a href="{{ url_for('main.make_a_query', query_type = 'author_papers') }}" title="">Author</a>
-                                <a href="" title="">Affiliation</a>
+                                <a href="{{ url_for('main.make_a_query', query_type = 'affil_papers') }}" title="">Affiliation</a>
                                 <a href="" title="">Location</a>
                                 <a href="" title="">Topic Area</a>
                             </div>

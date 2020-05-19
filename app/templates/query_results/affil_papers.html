@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block app_content %}
+<head>
+<style>
+
+/* Dropdown Button */
+#example-table td {
+  padding: 15px;
+  border-top: solid;
+
+}
+
+</style>
+
+</head>
+
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+    	<link href="/static/jquery-ui.min.css" rel="stylesheet">
+	    <link rel="stylesheet" href="/static/bootstrap.min.css">
+    	<link href="/static/tabulator.css" rel="stylesheet">
+
+	</head>
+<body data-gr-c-s-loaded="true" style="overflow:scroll">
+			<div style="text-align: center"> Showing {{ n_results }} results from your query... </div>
+
+			<div>
+			    <button id="download-csv">Download CSV</button>
+			    <button id="download-json">Download JSON</button>
+			</div>
+			<div style="width:100%">
+				<table id="example-table">
+				<thead>
+			        <tr>
+			            <th class="tableCell">Processed Affil Grouping</th>
+			            <th class="tableCell">N Papers from Group in Query</th>
+			            <th class="tableCell">Locations</th>
+			            <th class="tableCell">Queried Papers' Keywords</th>
+			            <th class="tableCell">Linked Papers</th>
+			            <th class="tableCell">Queried Papers' Pubtypes</th>
+			            <th class="tableCell">Authors</th>
+			            <th class="tableCell">Affiliations (n) (truncated)</th>
+			        </tr>
+		    	</thead>
+		    	<tbody>
+			    	{% for affil, affil_dict in data.items() %}
+			        <tr>
+			            <td class="tableCell">{{ affil }}</td>
+			            <td sclass="tableCell">{{ affil_dict['total_count'] }}</td>
+			            <td class="tableCell">
+			            {% for pmid, locs in affil_dict['locations'].items() %}
+	            			<div>{{ pmid }} <i>({{ locs }})</i></div>
+				            <br>
+			            {% endfor %}
+			        	</td>
+			            <td class="tableCell">
+				            {% for keyword, count in affil_dict['papers_keywords_counts'][:25] %}
+								<br>{{ keyword }} ({{ count }})
+							{% endfor %}
+			        	</td>
+			            <td class="tableCell">
+				            {% for paper in affil_dict['papers_links'] %}
+				            <br>
+				            <a title= "{{ paper['title'] }}" href= "{{ paper['link'] }}">
+				            	{{ paper['title'] }}
+			            	</a>
+				        	{% endfor %}
+			        	</td>
+			            <td class="tableCell">
+				            {% for pubtype, count in affil_dict['papers_pubtype_counts'] %}
+								<br>{{ pubtype }} ({{ count }})
+							{% endfor %}
+			        	</td>
+			            <td class="tableCell">
+				            {% for pmid, authors in affil_dict['authors'].items() %}
+				            	<b>{{ pmid }}</b><br>
+				            	{% for author, count in authors.items() %}
+									{{ author }}<i>({{ count }})
+					            {% endfor %}
+					            <br>
+				            {% endfor %}
+			        	</td>
+			            <td class="tableCell">
+				            {% for pmid, raw_affs in affil_dict['raw_affiliations'].items() %}
+				            	<b>{{ pmid }}</b><br>
+				            	{% for raw_aff, count in raw_affs.items() %}
+									{{ raw_aff }}<i>({{ count }})
+					            {% endfor %}
+					            <br>
+				            {% endfor %}
+			        	</td>
+			        </tr>
+		        	{% endfor %}
+		    	</tbody>
+				</table>
+			</div>
+
+
+
+	<script type="text/javascript" src="/static/tabulator.js"></script>
+	<script type="text/javascript" src="/static/jquery-3.5.1.min.js"></script>
+	<script type="text/javascript" src="/static/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="/static/bootstrap.min.js"></script>    
+    
+    <script type="text/javascript"> 
+	// -->
+	var table = new Tabulator("#example-table", {
+		height:"600px",
+		layout:"fitDataFill",
+		responsiveLayout:"collapse",
+	    responsiveLayoutCollapseStartOpen:false,
+		columns:[
+	    {formatter:"responsiveCollapse", width:30, minWidth:30, hozAlign:"center", resizable:false, headerSort:false},
+		{title:"Processed Affil Grouping", field:"affil", formatter:"textarea", width:300, responsive:0},
+    	{title:"N Papers from Group in Query", field:"n papers", width:50, responsive:0},
+    	{title:"Locations", field:"locations", formatter:"html", width:200},
+    	{title:"Queried Papers' Keywords", field:"paper keywords", formatter:"html", width:400},
+    	{title:"Linked Papers", field:"papers", formatter:"html", width:600},
+    	{title:"Queried Papers' Pubtypes", field:"paper pubtypes", formatter:"html", width:400},
+    	{title:"Authors", field:"authors", formatter:"html", width:400},
+    	{title:"Affiliations (n) (truncated)", field:"affiliations", formatter:"html", width:400},
+    ]
+	});
+    
+   $("#download-csv").click(function(){
+       table.download("csv", "data.csv");
+   });
+
+   $("#download-json").click(function(){
+       table.download("json", "data.json");
+   });
+		
+	</script>  
+
+
+</body>
+
+
+</html>
+
+
+{% endblock %}
