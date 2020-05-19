@@ -42,13 +42,15 @@ def query_author_affils_data(query, from_year, locations, n_authors, timeit_star
 
 def query_author_papers_data(query, from_year, locations, affils, n_authors, timeit_start, api_key):
     
-    response, count_results = get_article_ids(query, sort = 'relevance', from_year = from_year, 
+    papers_result, count_results = get_article_ids(query, sort = 'relevance', from_year = from_year, 
                     locations = locations, affils = affils,
                     time_start = timeit_start, api_key = api_key)
-    papers_result = response.to_dict('records')
-    if len(papers_result) == 0:
-        papers_result = pd.DataFrame([])
-        return {'error' : f"Query returned no results after filtering. Try again with less specific query terms. "}
+    print(papers_result)
+    if not papers_result:
+        return {'error' : 'No results returned from query. Trying adding more locations, removing locations entirely or broadening your search terms.'}
+    
+    if papers_result[0].get('error'):
+        return {'error' : papers_result[0].get('error')}
     ### If query length was > MAX_RESULT setting
     #if papers_result[0] == 'error':
     #    return papers_result

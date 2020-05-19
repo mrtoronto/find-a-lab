@@ -155,7 +155,8 @@ def get_article_ids(query, sort, locations, affils, from_year = "",
     parsed_papers = []
 
     if count_results > int(Config.MAX_RESULTS):
-        papers_result = pd.DataFrame([f"Your query was too large. The results had {count_results} papers and the current max is set to {Config.MAX_RESULTS}. I apologize for this limit. Making websites is harder than you'd think."])
+        papers_result = [{'error' : f"Your query was too large. The results had {count_results} papers and the current max is set to {Config.MAX_RESULTS}. I apologize for this limit. Making websites is harder than you'd think."}]
+        return papers_result, 0
     else:
         ### Get Abstracts with efetch
         efetch_base = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi'
@@ -169,7 +170,7 @@ def get_article_ids(query, sort, locations, affils, from_year = "",
         papers_result = pd.concat(parsed_papers, axis=0, ignore_index=True)
     print(f'Query for "{query}" from {from_year} onward has downloaded and been parsed in {round(time.time() - time_start, 4)} seconds. It was filtered to {papers_result.shape[0]} rows.')
 
-    return papers_result, count_results
+    return papers_result.to_dict('records'), count_results
 
 
 if __name__ == "__main__":
