@@ -8,11 +8,16 @@ from geotext import GeoText
 import time
 import re
 import itertools
+from nltk.corpus import stopwords
+
+dir_ = os.path.dirname(os.path.realpath(__file__))
+
+stopwords_w2v = set(open(os.path.join(dir_, "..", "stopwords.txt"),'r').read().splitlines())
 
 def preprocess(text):
     if text:
-        text = re.sub('[,\.\d]', '', text.lower().strip())
-        text = re.sub(' +', ' ', text.lower().strip())
+        text = re.sub(' +', ' ', text)
+        text = " ".join([re.sub('[\-;,\.\d]', '', word.lower()) for word in text.split(' ') if word not in stopwords_w2v]).strip()
     return text
 
 def get_location(affiliation):
@@ -114,10 +119,10 @@ def count_obj_occurance(matching_value, obj_key, paa_cross_mapping, pmid_suffix,
     return reformatted_affiliations
 
 def count_papers(matching_value, papers_data, matching_field):
-    if matching_field == 'author':
+    if matching_field == 'author_string':
         author_papers = list(set([paper_data.get('pmid') for paper_data in \
             papers_data if paper_data.get('pmid') and paper_data.get(matching_field) == matching_value]))
-        
+
     elif matching_field == 'affiliations':
         author_papers = list(set([paper_data.get('pmid') for paper_data in \
             papers_data if paper_data.get('pmid') and preprocess(paper_data.get(matching_field)) == matching_value]))
@@ -209,35 +214,35 @@ def group_papers_by_top_obj(paa_cross_mapping, obj_key, n_affiliations=3):
     top_obj_list = list(top_objs.keys())
 
 
-    for affil in top_obj_list:
+    for obj in top_obj_list:
         obj_dict = {}
         if obj_key == 'affiliations':
-            obj_dict = {'proc_Affiliation' : affil, 
-               'total_papers' : count_papers(affil, paa_cross_mapping, 'affiliations'),
+            obj_dict = {'proc_Affiliation' : obj, 
+               'total_papers' : count_papers(obj, paa_cross_mapping, 'affiliations'),
                'authors' : count_obj_occurance(
-                            matching_value=affil, 
+                            matching_value=obj, 
                             paa_cross_mapping=paa_cross_mapping, 
                             pmid_suffix='author_string', 
                             n_affiliations=n_affiliations, 
                             obj_key='affiliations'),
                'raw_affiliations' : count_obj_occurance(
-                            matching_value=affil, 
+                            matching_value=obj, 
                             paa_cross_mapping=paa_cross_mapping, 
                             pmid_suffix='affiliations', 
                             n_affiliations=n_affiliations, 
                             obj_key='affiliations')}
 
         elif obj_key == 'author_string':
-            obj_dict = {'author' : author_name, 
-                        'total_papers' : count_papers(author_name, paa_cross_mapping, 'author_string'),
+            obj_dict = {'author' : obj, 
+                        'total_papers' : count_papers(obj, paa_cross_mapping, 'author_string'),
                         'locations' : count_obj_occurance(
-                            matching_value=author_name, 
+                            matching_value=obj, 
                             paa_cross_mapping=paa_cross_mapping, 
                             pmid_suffix='locations', 
                             n_affiliations=n_affiliations, 
                             obj_key='author_string'),
                         'affiliations' : count_obj_occurance(
-                            matching_value=author_name, 
+                            matching_value=obj, 
                             paa_cross_mapping=paa_cross_mapping, 
                             pmid_suffix='affiliations', 
                             n_affiliations=n_affiliations, 
