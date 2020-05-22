@@ -184,9 +184,9 @@ def get_results(job_key):
     ### Return results 
     if job.is_finished and job.result:
         result = Result.query.filter_by(id=job.result).first()
-        if obj_dicts.get('error'):
+        if result.result_all.get('error'):
 
-            return render_template('errors/data_error.html', data = obj_dicts.get('error'), 
+            return render_template('errors/data_error.html', data = result.result_all.get('error'), 
                     query_text = result.query_text, query_from = result.query_from , 
                     query_location =  result.query_locations, query_affiliations = result.query_affiliations)
 
