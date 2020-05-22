@@ -195,11 +195,11 @@ def get_results(job_key):
         ### Return different pages for different queries
         if result.query_type == 'affil_papers':
             return render_template('query_results/affil_papers.html', \
-                data = result.result_all, n_results = n_results, unique_results = reuslts.length_of_results), 200
+                data = result.result_all, n_results = n_results, unique_results = result.length_of_results), 200
         
         elif result.query_type == 'author_papers':
             return render_template('query_results/author_papers.html', \
-                data = result.result_all, n_results = n_results, unique_results = reuslts.length_of_results), 200 
+                data = result.result_all, n_results = n_results, unique_results = result.length_of_results), 200 
     ### Refresh if job is still processing
     else:
         return render_template('query_results/processing.html', job_key = job_key), 202
