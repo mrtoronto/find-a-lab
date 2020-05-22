@@ -133,7 +133,7 @@ def make_a_query(query_type):
                 func=run_query, args=(query_type, 
                     form.query_text.data, form.query_from.data, 
                     form.locations.data, form.affiliations.data, 
-                    form.api_key.data, current_user.username), result_ttl=app.config['RESULT_TTL'])
+                    form.api_key.data, current_user.username), result_ttl=current_app.config['RESULT_TTL'])
             flash(f'Your query is running! Your ID is : {job.get_id()}')
             return get_results(job.get_id())
 
