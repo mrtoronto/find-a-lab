@@ -142,7 +142,7 @@ def pubmed_xml_parse(xml_text, locations, affils):
     return papers_df
 
 def get_article_ids(query, sort, locations, affils, from_year = "", 
-                    api_key="", chunk_size = 5000, time_start=time.time()):
+                    api_key="", chunk_size = 1000, time_start=time.time()):
     now = datetime.datetime.now()
 
     esearch_base = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi'
