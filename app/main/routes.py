@@ -125,10 +125,13 @@ def make_a_query(query_type):
 
             ### If async == True, queue a task with the args from the form
             job = current_app.task_queue.enqueue_call(
-                func=run_query, args=(query_type, 
+                func=run_query, 
+                args=(query_type, 
                     form.query_text.data, form.query_from.data, 
                     form.locations.data, form.affiliations.data, 
-                    form.api_key.data, current_user.username), result_ttl=current_app.config['RESULT_TTL'])
+                    form.api_key.data, current_user.username), 
+                result_ttl=current_app.config['RESULT_TTL'],
+                timeout=1000)
             flash(f'Your query is running! Your ID is : {job.get_id()}')
             return get_results(job.get_id())
 
@@ -180,7 +183,7 @@ def get_results(job_key):
     """
 
     job = Job.fetch(job_key, connection=current_app.redis)
-    print(job.result)
+
     ### Return results 
     if job.is_finished and job.result:
         result = Result.query.filter_by(id=job.result).first()
