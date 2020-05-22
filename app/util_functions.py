@@ -114,8 +114,13 @@ def count_obj_occurance(matching_value, obj_key, paa_cross_mapping, pmid_suffix,
     return reformatted_affiliations
 
 def count_papers(matching_value, papers_data, matching_field):
-    author_papers = list(set([paper_data.get('pmid') for paper_data in \
-        papers_data if paper_data.get('pmid') and preprocess(paper_data.get(matching_field)) == matching_value]))
+    if matching_field == 'author':
+        author_papers = list(set([paper_data.get('pmid') for paper_data in \
+            papers_data if paper_data.get('pmid') and paper_data.get(matching_field) == matching_value]))
+        
+    elif matching_field == 'affiliations':
+        author_papers = list(set([paper_data.get('pmid') for paper_data in \
+            papers_data if paper_data.get('pmid') and preprocess(paper_data.get(matching_field)) == matching_value]))
     return len(author_papers)
 
 

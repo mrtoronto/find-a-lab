@@ -14,7 +14,8 @@ def query_author_papers_data(query, from_year, locations, affils, n_authors, tim
     if papers_data[0].get('error'):
         return papers_data[0]
 
-    affiliations_by_author, top_authors = map_author_to_affil(paper_author_affil_mapping, n_affiliations = 5)
+    affiliations_by_author, top_authors = group_papers_by_top_obj(paa_cross_mapping=paper_author_affil_mapping, 
+                                                                n_affiliations = 5, obj_key = 'affiliations')
     """
     Get papers for top 25 authors
     Each element of contained in `paper_top_author_dict` looks like :

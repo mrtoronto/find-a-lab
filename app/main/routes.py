@@ -131,7 +131,7 @@ def make_a_query(query_type):
                     form.locations.data, form.affiliations.data, 
                     form.api_key.data, current_user.username), 
                 result_ttl=current_app.config['RESULT_TTL'],
-                timeout=1000)
+                timeout=current_app.config['WORKER_TIMEOUT'])
             flash(f'Your query is running! Your ID is : {job.get_id()}')
             return get_results(job.get_id())
 
