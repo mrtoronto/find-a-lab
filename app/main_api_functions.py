@@ -5,49 +5,14 @@ from flask import jsonify
 import itertools
 
 
-def query_author_affils_data(query, from_year, locations, n_authors, timeit_start):
-    """
-    Function provides data for the `query_author_affils()` function which serves the /api/query/author_affils/ endpoint.
-
-    Currently n_authors filters before results are filtered by location so it would be good to swap that.
-
-    Args:
-
-    Returns:
-        dataframe - Contains data on author's top affiliations potentially filtered with location 
-    """
-    response, count_results = get_article_ids(query, sort = 'relevance', from_year = from_year, \
-                                api_key="9f66a38099f29d882365afb5ea170b1ef608")
-    papers_result = response.to_dict('records')
-    if len(papers_result) == 1:
-        return papers_result
-    if len(papers_result) == 0:
-        papers_result = pd.DataFrame(['error', f"Query returned no results after filtering. Try again with less specific query terms. This query had {count_results} results and the current max is set to {Config.MAX_RESULTS}. I apologize for this limit. Making websites is harder than you'd think."])
-        return papers_result.to_dict('records')
-
-    print(f'`author_affils_w_location` for "{query}" from {from_year} has downloaded articles in {round(time.time() - timeit_start, 4)} seconds.')
-
-    authors_affils = create_author_affil_list(papers_result)
-
-    print(f'`author_affils_w_location` for "{query}" from {from_year} has created lists in {round(time.time() - timeit_start, 4)} seconds.')
-
-    affiliations_by_author, top_authors = map_author_to_affil(authors_affils, 
-                                    locations_of_interest = locations, n_affiliations = 3)
-    print(f'`author_affils_w_location` for "{query}" from {from_year} has mapped affiliations in {round(time.time() - timeit_start, 4)} seconds.')
-
-    author_df = author_affil_total_df(affiliations_by_author, n_authors)
-
-    return author_df
-
-
 def query_author_papers_data(query, from_year, locations, affils, n_authors, timeit_start, api_key):
     
     papers_data, paper_author_affil_mapping = query_to_paa_index(query = query, from_year = from_year, 
                                                     locations = locations, affils = affils,
                                                     api_key = api_key, timeit_start=timeit_start)
 
-    if papers_data[0].get('error'):
-        return papers_data[0]
+    if papers_data.get('error'):
+        return papers_data
 
     affiliations_by_author, top_authors = map_author_to_affil(paper_author_affil_mapping, n_affiliations = 5)
     """
@@ -105,8 +70,8 @@ def query_affil_papers_data(query, from_year, locations, affils, n_authors, time
     papers_data, paper_author_affil_mapping = query_to_paa_index(query = query, from_year = from_year, 
                                                 locations = locations, affils = affils,
                                                 api_key = api_key, timeit_start=timeit_start)
-    if papers_data[0].get('error'):
-        return papers_data[0]
+    if papers_data.get('error'):
+        return papers_data
     """
     `affil_authors` looks like :
     {'affiliation' : affil, 

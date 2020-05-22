@@ -164,7 +164,7 @@ def make_a_query(query_type):
                                         affils = form.affiliations.data, 
                                         api_key = form.api_key.data,
                                         api_out = False)
-                n_results = sum([author_dict['total_count'] for author_dict in \
+                n_results = sum([author_dict.get('total_count', 0) for author_dict in \
                             author_dicts.values()])
 
                 length_of_results = len(author_dicts.keys())
@@ -189,7 +189,7 @@ def get_results(job_key):
     ### Return results 
     if job.is_finished and job.result:
         result = Result.query.filter_by(id=job.result).first()
-        n_results = sum([author_dict['total_count'] for author_dict in \
+        n_results = sum([author_dict.get('total_count', 0) for author_dict in \
             result.result_all.values()])
 
         ### Return different pages for different queries

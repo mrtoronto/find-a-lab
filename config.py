@@ -16,7 +16,7 @@ class Config(object):
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     ADMINS = ['your-email@example.com']
-    MAX_RESULTS = os.environ.get('MAX_RESULTS') or 15000 ### Max query results to prevent timeout
+    MAX_RESULTS = os.environ.get('MAX_RESULTS') or 100000 ### Max query results to prevent timeout
     LOG_TO_STDOUT = os.environ.get('LOG_TO_STDOUT') 
     REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379' ### Redis URL
     RESULT_TTL = 5000 ### Seconds to save results on the page with the token

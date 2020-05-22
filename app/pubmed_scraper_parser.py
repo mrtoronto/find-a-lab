@@ -14,10 +14,10 @@ def query_to_paa_index(query, from_year, locations, affils, api_key, timeit_star
                     locations = locations, affils = affils,
                     time_start = timeit_start, api_key = api_key)
     if not papers_data:
-        return [{'error' : 'No results returned from query. Trying adding more locations, removing locations entirely or broadening your search terms.'}], ''
+        return {'error' : 'No results returned from query. Trying adding more locations, removing locations entirely or broadening your search terms.'}, ''
     
     if papers_data[0].get('error'):
-        return [{'error' : papers_data[0].get('error')}], ''
+        return {'error' : papers_data[0].get('error')}, ''
 
     paper_author_affil_mapping = create_paper_author_affil_index(papers_data=papers_data)
 
