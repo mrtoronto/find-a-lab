@@ -8,7 +8,10 @@ from geotext import GeoText
 import time
 import re
 import itertools
+from fuzzywuzzy import fuzz
 from nltk.corpus import stopwords
+from fuzzywuzzy import fuzz
+
 
 dir_ = os.path.dirname(os.path.realpath(__file__))
 
@@ -293,19 +296,14 @@ def get_obj_papers(obj_of_interest, obj_key, authors_affils, papers_data):
                     'pmid' : author_affil_dict['pmid']} for author_affil_dict in authors_affils]
     matching_pmids = []
     ### Find an authors PMIDs
-    for author_pmid in obj_pmids:
-        if author_pmid[obj_key] == obj_of_interest:
-            matching_pmids.append(author_pmid['pmid'])
-    matching_papers = []
-    for paper in papers_data:
-        if paper['pmid'] in matching_pmids:
-            matching_papers.append(paper)
-
-    matching_papers_df = pd.DataFrame(matching_papers)
-    matchedPapers = matching_papers_df#.drop(columns=['pub_type_list', 'journal_info_list', 'author_list', 'keywords'])
-    matchedPapers_dicts = matchedPapers.to_dict('records')
+    if obj_key == 'affiliations':
+        matching_pmids = [obj_pmid['pmid'] for obj_pmid in obj_pmids if fuzz.partial_ratio(obj_pmid[obj_key], obj_of_interest) > .9]
+    else:
+        matching_pmids = [obj_pmid['pmid'] for obj_pmid in obj_pmids if obj_pmid[obj_key] == obj_of_interest]
+    
+    matching_papers = [paper for paper in papers_data if paper['pmid'] in matching_pmids]
         
-    return matchedPapers_dicts
+    return matching_papers
 
 
 def get_top_obj_papers(top_objs, authors_affils, papers_data, obj_key):
@@ -316,8 +314,8 @@ def get_top_obj_papers(top_objs, authors_affils, papers_data, obj_key):
             obj_of_interest = preprocess(obj_of_interest)
         matchedPapers_dicts = get_obj_papers(obj_of_interest=obj_of_interest, obj_key = obj_key, 
                                             authors_affils=authors_affils, papers_data=papers_data)
-        for matchedPaper in matchedPapers_dicts:
-            top_obj_papers[f"{obj_of_interest}_{matchedPaper['pmid']}"] = {
+
+        top_obj_papers = {f"{obj_of_interest}_{matchedPaper['pmid']}" : {
                         'join_obj' : obj_of_interest, 
                         'raw_join_obj' : raw_obj_of_interest,
                         'title' : matchedPaper['title'], 
@@ -328,7 +326,7 @@ def get_top_obj_papers(top_objs, authors_affils, papers_data, obj_key):
                         'all_authors_list' : ",".join([author_affil[0][2] + ', ' + author_affil[0][0] for author_affil in matchedPaper['author_list']]), 
                         'mesh_keywords' : list(matchedPaper['mesh_keywords'].keys()),
                         'other_ids' : ",".join(matchedPaper['other_ids'].values())
-                        }
+                        } for matchedPaper in matchedPapers_dicts}
 
             
     return top_obj_papers
