@@ -5,7 +5,6 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 from app import db, login
-from sqlalchemy.dialects.postgresql import JSON
 
 
 class User(UserMixin, db.Model):
@@ -47,11 +46,8 @@ def load_user(id):
 
 
 
-class Result(db.Model):
-
-    __tablename__ = 'results'
-
-    id = db.Column(db.Integer, primary_key=True)
+class Query(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
     query_type = db.Column(db.String(120))
     query_text = db.Column(db.String(500)) 
     query_from = db.Column(db.Integer)
@@ -60,7 +56,3 @@ class Result(db.Model):
     user_querying = db.Column(db.String(250))
     redis_token = db.Column(db.String(400))
     length_of_results = db.Column(db.Integer)
-    result_all = db.Column(JSON)
-
-    def __repr__(self):
-        return '<id {}>'.format(self.id)

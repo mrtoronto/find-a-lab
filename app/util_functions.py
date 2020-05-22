@@ -156,13 +156,13 @@ def map_author_to_affil(papers_data, n_affiliations=3):
                                    'total_papers' : count_papers(author_name, papers_data, 'author_string'),
                                    'locations' : count_obj_occurance(
                                                 matching_value=author_name, 
-                                                paa_cross_mapping=papers_data, 
+                                                papers_data=papers_data, 
                                                 pmid_suffix='locations', 
                                                 n_affiliations=n_affiliations, 
                                                 obj_key='author_string'),
                                    'affiliations' : count_obj_occurance(
                                                 matching_value=author_name, 
-                                                paa_cross_mapping=papers_data, 
+                                                papers_data=papers_data, 
                                                 pmid_suffix='affiliations', 
                                                 n_affiliations=n_affiliations, 
                                                 obj_key='author_string')
@@ -322,52 +322,3 @@ def get_top_obj_papers(top_objs, authors_affils, papers_data, obj_key):
 
             
     return top_obj_papers
-
-
-
-def create_out_dict_obj_index(affil_authors, big_df, obj_key):
-    if affil_authors:
-        out_dict = {}
-        if obj_key == 'affiliations':
-            obj_key = 'proc_Affiliation'
-        for obj_dict in affil_authors:
-            
-            #affil_papers_df = big_df.loc[big_df[obj_key] == obj_dict[obj_key], :]
-            obj_papers_titles_links = big_df.loc[big_df[obj_key] == obj_dict[obj_key], ['pmid', 'title', 'link']].drop_duplicates()
-            obj_papers_pmids_keywords = big_df.loc[big_df[obj_key] == obj_dict[obj_key], ['pmid', 'mesh_keywords']].drop_duplicates(subset=['pmid'])
-            obj_papers_pmids_pubtypes = big_df.loc[big_df[obj_key] == obj_dict[obj_key], ['pmid', 'pubtype_list']].drop_duplicates(subset=['pmid'])
-            
-
-            if obj_key == 'proc_Affiliation':
-                locations = [[get_location(affil) for affil in affils_count_dict.keys()] for affils_count_dict in obj_dict['raw_affiliations'].values()]
-                locations = [item for sublist in locations for item in sublist]
-                location_counts = Counter(locations)
-                out_obj_dict = {'processed_affiliation' : obj_dict['proc_Affiliation'], 
-                                'total_count' : obj_dict['total_papers'],
-                                'authors' : obj_dict['authors'], 
-                                'raw_affiliations' : obj_dict['raw_affiliations'],
-                                'locations' : location_counts}
-            elif obj_key == 'author':
-                out_obj_dict = {'author' : obj_dict['author'], 
-                        'total_count' : obj_dict['total_papers'],
-                        'affiliations' : obj_dict['affiliations'],
-                        'locations' : obj_dict['locations']}
-
-
-            out_obj_dict['papers_dict'] = big_df.loc[big_df[obj_key] == obj_dict[obj_key], :].drop_duplicates(subset=['pmid']).drop(['raw_join_obj'], axis=1).to_dict('records')
-            out_obj_dict['papers_links'] = obj_papers_titles_links.to_dict('records')
-            out_obj_dict['papers_keywords'] = [paper['mesh_keywords'] for paper in obj_papers_pmids_keywords.to_dict('records')]
-            out_obj_dict['papers_keywords_counts'] = sorted(list(Counter([item for sublist in out_obj_dict['papers_keywords'] \
-                for item in sublist]).items()), key=lambda x: x[1], reverse=True)
-
-            out_obj_dict['papers_pubtypes'] = [paper['pubtype_list'] for paper in obj_papers_pmids_pubtypes.to_dict('records')]
-            out_obj_dict['papers_pubtype_counts'] = sorted(list(Counter([item for sublist in out_obj_dict['papers_pubtypes'] \
-                for item in sublist]).items()), key=lambda x: x[1], reverse=True)
-
-
-            out_dict[obj_dict[obj_key]] = out_obj_dict
-    
-    else:
-        out_dict = {'error' : 'no results for this query'}
-
-    return out_dict

@@ -9,10 +9,6 @@ from flask_mail import Mail
 from flask_bootstrap import Bootstrap
 from config import Config
 from flask_babel import Babel
-from redis import Redis
-from rq import Queue
-from rq.job import Job
-from worker import conn
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -33,8 +29,7 @@ def create_app(config_class=Config):
     mail.init_app(app)
     bootstrap.init_app(app)
     babel.init_app(app)
-    app.redis = conn
-    app.task_queue = Queue(connection=app.redis)
+    ### Redis 
     ### Task quene
 
     from app.auth import bp as auth_bp
