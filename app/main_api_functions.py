@@ -115,7 +115,6 @@ def query_affil_papers_data(query, from_year, locations, affils, n_authors, time
                                     'author': author_affil_dict['author_string']} for \
                                     author_affil_dict in paper_author_affil_mapping])
     big_df = pd.merge(paper_top_obj_df, df_to_match, left_on = ['join_obj', 'pmid'], right_on = ['proc_Affiliation', 'pmid']).drop(['join_obj'], axis=1)
-    #out_dict = {}
 
     out_dict = create_out_dict_obj_index(affil_authors, big_df, 'affiliations')
     

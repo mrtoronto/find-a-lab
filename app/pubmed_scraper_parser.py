@@ -16,8 +16,8 @@ def query_to_paa_index(query, from_year, locations, affils, api_key, timeit_star
     if not papers_data:
         return {'error' : 'No results returned from query. Trying adding more locations, removing locations entirely or broadening your search terms.'}, ''
     
-    if papers_data[0].get('error'):
-        return {'error' : papers_data[0].get('error')}, ''
+    if papers_data.get('error'):
+        return papers_data, ''
 
     paper_author_affil_mapping = create_paper_author_affil_index(papers_data=papers_data)
 
@@ -169,7 +169,7 @@ def get_article_ids(query, sort, locations, affils, from_year = "",
     parsed_papers = []
 
     if count_results > int(Config.MAX_RESULTS):
-        papers_result = [{'error' : f"Your query was too large. The results had {count_results} papers and the current max is set to {Config.MAX_RESULTS}. I apologize for this limit. Making websites is harder than you'd think."}]
+        papers_result = {'error' : f"Your query was too large. The results had {count_results} papers and the current max is set to {Config.MAX_RESULTS}. I apologize for this limit. Making websites is harder than you'd think."}
         return papers_result, 0
     else:
         ### Get Abstracts with efetch
