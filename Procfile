@@ -1,2 +1,2 @@
-web: flask db upgrade; gunicorn fal:app --timeout 180
+web: flask db upgrade; gunicorn fal:app
 worker: rq worker -u $REDIS_URL
