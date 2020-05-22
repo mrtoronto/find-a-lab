@@ -46,7 +46,9 @@ def query_author_papers_data(query, from_year, locations, affils, n_authors, tim
                                                     locations = locations, affils = affils,
                                                     api_key = api_key, timeit_start=timeit_start)
 
-    
+    if papers_data[0].get('error'):
+        return papers_data[0]
+
     affiliations_by_author, top_authors = map_author_to_affil(paper_author_affil_mapping, n_affiliations = 5)
     """
     Get papers for top 25 authors
@@ -77,39 +79,9 @@ def query_author_papers_data(query, from_year, locations, affils, n_authors, tim
     
 
     big_df = pd.merge(paper_top_author_df, affiliations_df, left_on = ['join_obj', 'pmid'], right_on = ['author', 'pmid'])#.drop('join_obj', index=1)
-    out_dict = {}
-    if affiliations_by_author:
-        for author_dict in affiliations_by_author:
-            author_papers_df = big_df.loc[big_df['author'] == author_dict['author'], :]
-            author_papers_titles_links = big_df.loc[big_df['author'] == author_dict['author'], ['pmid', 'title', 'link']].drop_duplicates()
-            author_papers_pmids_keywords = big_df.loc[big_df['author'] == author_dict['author'], ['pmid', 'mesh_keywords']].drop_duplicates(subset=['pmid'])
-            author_papers_pmids_pubtypes = big_df.loc[big_df['author'] == author_dict['author'], ['pmid', 'pubtype_list']].drop_duplicates(subset=['pmid'])
-
-
-            out_author_dict = {'author' : author_dict['author'], 
-                            'total_count' : author_dict['total_papers'],
-                            'affiliations' : author_dict['affiliations'],
-                            'locations' : author_dict['locations']}
-
-            out_author_dict['papers_dict'] = big_df.loc[big_df['author'] == author_dict['author'], :].drop_duplicates(subset=['pmid']).to_dict('records')
-            out_author_dict['papers_links'] = author_papers_titles_links.to_dict('records')
-            out_author_dict['papers_keywords'] = [paper['mesh_keywords'] for paper in author_papers_pmids_keywords.to_dict('records')]
-            out_author_dict['papers_keywords_counts'] = sorted(list(Counter([item for sublist in out_author_dict['papers_keywords'] \
-                for item in sublist]).items()), key=lambda x: x[1], reverse=True)
-
-            out_author_dict['papers_pubtypes'] = [paper['pubtype_list'] for paper in author_papers_pmids_pubtypes.to_dict('records')]
-            out_author_dict['papers_pubtype_counts'] = sorted(list(Counter([item for sublist in out_author_dict['papers_pubtypes'] \
-                for item in sublist]).items()), key=lambda x: x[1], reverse=True)
-
-
-            out_dict[author_dict['author']] = out_author_dict
-    
-    elif fully_filtered_flag:
-        out_dict = {'error' : 'There were results but they were filtered by your location/affiliation criteria.'}
-    
-    else:
-        out_dict = {'error' : 'no results for this query'}
-    
+    print(big_df.shape)
+    out_dict = create_out_dict_obj_index(affiliations_by_author, big_df, 'author')
+    print(len(out_dict.keys()))
     
     return out_dict
 
@@ -134,7 +106,7 @@ def query_affil_papers_data(query, from_year, locations, affils, n_authors, time
                                                 locations = locations, affils = affils,
                                                 api_key = api_key, timeit_start=timeit_start)
     if papers_data[0].get('error'):
-        return jsonify(papers_data[0])
+        return papers_data[0]
     """
     `affil_authors` looks like :
     {'affiliation' : affil, 
@@ -178,40 +150,9 @@ def query_affil_papers_data(query, from_year, locations, affils, n_authors, time
                                     'author': author_affil_dict['author_string']} for \
                                     author_affil_dict in paper_author_affil_mapping])
     big_df = pd.merge(paper_top_obj_df, df_to_match, left_on = ['join_obj', 'pmid'], right_on = ['proc_Affiliation', 'pmid']).drop(['join_obj'], axis=1)
-    out_dict = {}
-    if affil_authors:
-        for affil_dict in affil_authors:
-            affil_papers_df = big_df.loc[big_df['proc_Affiliation'] == affil_dict['proc_Affiliation'], :]
-            affil_papers_titles_links = big_df.loc[big_df['proc_Affiliation'] == affil_dict['proc_Affiliation'], ['pmid', 'title', 'link']].drop_duplicates()
-            affil_papers_pmids_keywords = big_df.loc[big_df['proc_Affiliation'] == affil_dict['proc_Affiliation'], ['pmid', 'mesh_keywords']].drop_duplicates(subset=['pmid'])
-            affil_papers_pmids_pubtypes = big_df.loc[big_df['proc_Affiliation'] == affil_dict['proc_Affiliation'], ['pmid', 'pubtype_list']].drop_duplicates(subset=['pmid'])
-            locations = [[get_location(affil) for affil in affils_count_dict.keys()] for affils_count_dict in affil_dict['raw_affiliations'].values()]
-            locations = [item for sublist in locations for item in sublist]
-            location_counts = Counter(locations)
-            out_affil_dict = {'processed_affiliation' : affil_dict['proc_Affiliation'], 
-                            'total_count' : affil_dict['total_papers'],
-                            'authors' : affil_dict['authors'], 
-                            'raw_affiliations' : affil_dict['raw_affiliations'],
-                            'locations' : location_counts}
+    #out_dict = {}
 
-            out_affil_dict['papers_dict'] = big_df.loc[big_df['proc_Affiliation'] == affil_dict['proc_Affiliation'], :].drop_duplicates(subset=['pmid']).drop(['raw_join_obj'], axis=1).to_dict('records')
-            out_affil_dict['papers_links'] = affil_papers_titles_links.to_dict('records')
-            out_affil_dict['papers_keywords'] = [paper['mesh_keywords'] for paper in affil_papers_pmids_keywords.to_dict('records')]
-            out_affil_dict['papers_keywords_counts'] = sorted(list(Counter([item for sublist in out_affil_dict['papers_keywords'] \
-                for item in sublist]).items()), key=lambda x: x[1], reverse=True)
-
-            out_affil_dict['papers_pubtypes'] = [paper['pubtype_list'] for paper in affil_papers_pmids_pubtypes.to_dict('records')]
-            out_affil_dict['papers_pubtype_counts'] = sorted(list(Counter([item for sublist in out_affil_dict['papers_pubtypes'] \
-                for item in sublist]).items()), key=lambda x: x[1], reverse=True)
-
-
-            out_dict[affil_dict['proc_Affiliation']] = out_affil_dict
-    
-    elif fully_filtered_flag:
-        out_dict = {'error' : 'There were results but they were filtered by your location/affiliation criteria.'}
-    
-    else:
-        out_dict = {'error' : 'no results for this query'}
+    out_dict = create_out_dict_obj_index(affil_authors, big_df, 'affiliations')
     
     
     return out_dict
