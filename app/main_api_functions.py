@@ -11,8 +11,8 @@ def query_author_papers_data(query, from_year, locations, affils, n_authors, tim
                                                     locations = locations, affils = affils,
                                                     api_key = api_key, timeit_start=timeit_start)
 
-    if papers_data.get('error'):
-        return papers_data
+    if papers_data[0].get('error'):
+        return papers_data[0]
 
     affiliations_by_author, top_authors = map_author_to_affil(paper_author_affil_mapping, n_affiliations = 5)
     """
@@ -70,8 +70,8 @@ def query_affil_papers_data(query, from_year, locations, affils, n_authors, time
     papers_data, paper_author_affil_mapping = query_to_paa_index(query = query, from_year = from_year, 
                                                 locations = locations, affils = affils,
                                                 api_key = api_key, timeit_start=timeit_start)
-    if papers_data.get('error'):
-        return papers_data
+    if papers_data[0].get('error'):
+        return papers_data[0]
     """
     `affil_authors` looks like :
     {'affiliation' : affil, 
