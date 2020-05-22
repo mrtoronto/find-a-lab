@@ -34,7 +34,7 @@ def create_app(config_class=Config):
     bootstrap.init_app(app)
     babel.init_app(app)
     app.redis = conn
-    app.task_queue = Queue(connection=app.redis)
+    app.task_queue = Queue(connection=app.redis, name='FAL-tasks')
     ### Task quene
 
     from app.auth import bp as auth_bp
