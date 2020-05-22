@@ -21,4 +21,4 @@ class Config(object):
     REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379' ### Redis URL
     RESULT_TTL = 5000 ### Seconds to save results on the page with the token
     ASYNC_FUNC = True
-    WORKER_TIMEOU = os.environ.get('WORKER_TIMEOUT') or 1000
+    WORKER_TIMEOUT = os.environ.get('WORKER_TIMEOUT') or 1000
