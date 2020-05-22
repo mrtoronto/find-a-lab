@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block app_content %}
+
+<h1> Your query is being processed! </h1>
+
+<div> I'm not sure how to give you an estimate of when it'll be done but check back by clicking the hyperlink below or by copying and pasting the text link into your address bar. 
+<br>
+{{ url_for('main.get_results', job_key = job_key) }}
+<br>
+
+<p>
+<a href = "{{ url_for('main.get_results', job_key = job_key) }}">The link below</a>
+</p>
+
+Have a nice day, thanks for coming, hope to see you again soon!
+</div>
+
+{% endblock %}
