@@ -49,8 +49,6 @@ def load_user(id):
 
 class Result(db.Model):
 
-    __tablename__ = 'results'
-
     id = db.Column(db.Integer, primary_key=True)
     query_type = db.Column(db.String(120))
     query_text = db.Column(db.String(500)) 
